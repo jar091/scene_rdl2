@@ -23,7 +23,7 @@ namespace rdl2 {
  *  be written to the exr header.
  */
 
-class Metadata : public SceneObject {
+class RDL2_EXPORT Metadata : public SceneObject {
 
 public:
     typedef SceneObject Parent;

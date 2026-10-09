@@ -21,20 +21,38 @@
 #include <utility>
 #include <iostream>
 
-// TODO: are all of these actually still necessary
 #include <errno.h>
 #include <fcntl.h>
-#include <libgen.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#if defined(__APPLE__)
+#if defined(_WIN32)
+#include <direct.h>   // _mkdir
+#include <io.h>       // _access, _creat, _close, _unlink
+#elif defined(__APPLE__)
      #include <sys/types.h>
      #include <sys/socket.h>
      #include <sys/uio.h>
+     #include <unistd.h>
 #else
 #include <sys/sendfile.h>
-#endif
 #include <unistd.h>
+#endif
+
+#if defined(_WIN32)
+// UCRT spellings and access() modes. The mode values match POSIX for
+// existence/read/write; X_OK does not exist on Windows and must not be used
+// (invalid-parameter error).
+#define access ::_access
+#ifndef F_OK
+#define F_OK 0
+#endif
+#ifndef W_OK
+#define W_OK 2
+#endif
+#ifndef R_OK
+#define R_OK 4
+#endif
+#endif
 
 namespace scene_rdl2 {
 namespace util {
@@ -45,6 +63,15 @@ struct FreeDeleter
 {
     void operator()(void* ptr) { free(ptr); }
 };
+
+inline int portableMkdir(const char* path)
+{
+#if defined(_WIN32)
+    return ::_mkdir(path);
+#else
+    return ::mkdir(path, 0777);
+#endif
+}
 
 } // namespace
 
@@ -98,11 +125,20 @@ writeTest(const std::string& filePath, bool createDirectories)
     }
 
     // Try to create the file.
+#if defined(_WIN32)
+    int fd = ::_creat(filePath.c_str(), _S_IREAD | _S_IWRITE);
+#else
     int fd = creat(filePath.c_str(), 0666);
+#endif
     if (fd != -1) {
         // Success. Close and remove it.
+#if defined(_WIN32)
+        ::_close(fd);
+        ::_unlink(filePath.c_str());
+#else
         close(fd);
         unlink(filePath.c_str());
+#endif
         return true;
     }
 
@@ -113,7 +149,7 @@ writeTest(const std::string& filePath, bool createDirectories)
     }
 
     for (std::size_t separatorPos = 0; separatorPos != std::string::npos;
-            separatorPos = filePath.find('/', separatorPos + 1)) {
+            separatorPos = filePath.find_first_of("/\\", separatorPos + 1)) {
         auto leadingPath(filePath.substr(0, separatorPos));
         if (!leadingPath.empty() && access(leadingPath.c_str(), F_OK) != 0) {
             // If the problem isn't ENOENT, there's nothing we can do.
@@ -122,7 +158,7 @@ writeTest(const std::string& filePath, bool createDirectories)
             }
 
             // Does not exist, try to create directory.
-            if (mkdir(leadingPath.c_str(), 0777) != 0) {
+            if (portableMkdir(leadingPath.c_str()) != 0) {
                 return false;
             }
         }
@@ -136,12 +172,13 @@ writeTest(const std::string& filePath, bool createDirectories)
 std::string
 findFile(const std::string& name, const std::string& searchPath)
 {
-    // Prepend colon-separated entries from the searchPath until we succeed or
-    // run out of entries.
+    // Prepend separator-delimited entries from the searchPath until we
+    // succeed or run out of entries (':' on POSIX, ';' on Windows --
+    // kSearchPathSeparator keeps producers and consumers in sync).
     std::string remaining = searchPath;
     while (!remaining.empty()) {
         // Grab the next path entry.
-        std::size_t colonPos = remaining.find_first_of(':');
+        std::size_t colonPos = remaining.find_first_of(kSearchPathSeparator);
         std::string directory = remaining.substr(0, colonPos);
 
         // Concatenate it with the filename and check for existence.
@@ -244,6 +281,9 @@ absolutePath(const std::string& filePath, std::string relativeToPath)
 std::string
 currentWorkingDirectory()
 {
+    #if defined(_WIN32)
+    return std::filesystem::current_path().string();
+    #else
     #if defined(__APPLE__)
     char* cwd = getcwd (NULL, 0);
     #else
@@ -252,6 +292,7 @@ currentWorkingDirectory()
     std::string path(cwd);
     free(cwd);
     return path;
+    #endif
 }
 
 std::string
@@ -300,6 +341,8 @@ createDirectories(const std::string& path)
     while ((pos = path.find_first_of("/\\", pos + 1)) != std::string::npos) {
         std::string dir = path.substr(0, pos);
         #if defined(_WIN32)
+            // Drive roots ("C:") and UNC prefixes cannot be created.
+            if (dir.size() == 2 && dir[1] == ':') continue;
             if (_mkdir(dir.c_str()) != 0 && errno != EEXIST) {
         #else
             if (mkdir(dir.c_str(), 0777) != 0 && errno != EEXIST) {

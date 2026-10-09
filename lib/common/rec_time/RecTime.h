@@ -1,4 +1,4 @@
-// Copyright 2023-2025 DreamWorks Animation LLC
+﻿// Copyright 2023-2025 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
 
@@ -11,6 +11,8 @@
 
 #ifdef PLATFORM_APPLE
 #include <mach/mach_time.h> // mach_timebase_info(), mach_absolute_time()
+#elif defined(_WIN32)
+#include <intrin.h> // __rdtscp()
 #else // else of PLATFORM_APPLE
 #include <unistd.h> // usleep()
 #include <x86intrin.h> // __rdtscp()
@@ -66,9 +68,16 @@ public:
 
     static uint64_t getCurrentNanoSec()
     {
+#if defined(_WIN32)
+        // No clock_gettime in the UCRT; steady_clock is the monotonic
+        // equivalent (QueryPerformanceCounter underneath).
+        const auto tnow = std::chrono::steady_clock::now().time_since_epoch();
+        return std::chrono::duration_cast<std::chrono::nanoseconds>(tnow).count();
+#else
         timespec ts;
         clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
         return static_cast<uint64_t>(ts.tv_sec) * 1000000000ull + static_cast<uint64_t>(ts.tv_nsec); // return ns
+#endif
     }
 
 protected:
@@ -186,7 +195,7 @@ protected:
 
 //------------------------------------------------------------------------------------------
 
-class __attribute__((aligned(64))) RecTimeLog
+class alignas(64) RecTimeLog
 //
 // Simple logging for time value
 //

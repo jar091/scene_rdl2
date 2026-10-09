@@ -7,6 +7,11 @@
 #include "Platform.h"
 #if defined(__aarch64__)
    #include <scene_rdl2/common/arm/emulation.h>
+#elif defined(_MSC_VER)
+   // MSVC has no <x86intrin.h>; <intrin.h> + <immintrin.h> cover the
+   // bit-scan/interlocked intrinsics and the SSE/AVX vector types used here.
+   #include <intrin.h>
+   #include <immintrin.h>
 #else
 #include <x86intrin.h>
 #endif

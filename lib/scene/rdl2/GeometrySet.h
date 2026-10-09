@@ -33,7 +33,7 @@ namespace rdl2 {
  *
  * You can get the Geometries as a const SceneObjectIndexable& with the getGeometries() method call.
  */
-class GeometrySet : public SceneObject
+class RDL2_EXPORT GeometrySet : public SceneObject
 {
 public:
     typedef SceneObject Parent;

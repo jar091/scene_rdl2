@@ -1,7 +1,23 @@
 -- Copyright 2023-2024 DreamWorks Animation LLC
 -- SPDX-License-Identifier: Apache-2.0
 
-local data = io.read("*all")
+-- Read the luac bytecode and emit a C++ byte-array translation unit.
+--
+-- Invocation forms:
+--   lua bin2cc.lua <in.luac> <out.cc>   (file mode; binary-safe everywhere)
+--   luac -o - ... | lua bin2cc.lua > out.cc   (historical pipe mode; NOT
+--   usable on Windows, where cmd.exe pipes/redirection mangle binary data)
+local data
+if arg and arg[1] then
+    local inFile = assert(io.open(arg[1], "rb"))
+    data = inFile:read("*all")
+    inFile:close()
+else
+    data = io.read("*all")
+end
+if arg and arg[2] then
+    io.output(assert(io.open(arg[2], "w")))
+end
 
 io.write("// Copyright 2023-2024 DreamWorks Animation LLC\n")
 io.write("// SPDX-License-Identifier: Apache-2.0\n")

@@ -45,7 +45,7 @@ function(SceneRdl2_cxx_compile_options target)
                     -O3                         # the default is -O2 for RELWITHDEBINFO
                 >
         )
-    elseif (CMAKE_CXX_COMPILER_ID STREQUAL Clang)
+    elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         target_compile_options(${target}
             # TODO: Some if not all of these should probably be PUBLIC
             PRIVATE
@@ -54,16 +54,25 @@ function(SceneRdl2_cxx_compile_options target)
                 -Wno-deprecated-declarations    # disable auto_ptr deprecated warnings from log4cplus-1.
                 -Wno-unused-value               # caused by opt-debug build and MNRY_VERIFY.
         )
-    elseif (CMAKE_CXX_COMPILER_ID STREQUAL AppleClang)
+    elseif (CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
         target_compile_options(${target}
             PUBLIC
                 -Wno-gnu-alignof-expression
         )
-    elseif (CMAKE_CXX_COMPILER_ID STREQUAL Intel)
+    elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Intel")
         target_compile_options(${target}
             # TODO: Some if not all of these should probably be PUBLIC
             PRIVATE
                 -march=core-avx2                # Specify the name of the target architecture
+        )
+    elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+        target_compile_options(${target}
+            PRIVATE
+                /arch:AVX2                      # match -march=core-avx2 (also predefines __AVX__/__AVX2__)
+                /EHsc                           # standard C++ exception handling
+                /bigobj                         # some TUs exceed the default section limit
+                /Zc:preprocessor                # conforming preprocessor (VA_ARGS behavior of the assert macros)
+                /MP                             # parallel compilation within a project
         )
     endif()
 endfunction()

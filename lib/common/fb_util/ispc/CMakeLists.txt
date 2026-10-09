@@ -16,6 +16,16 @@ target_sources(${component}
         VariablePixelBuffer.ispc
 )
 
+if(WIN32)
+    # A DLL built purely from ISPC objects has no MSVC-compiled TU, so the
+    # default CRT libraries never get pulled in (_fltused,
+    # _DllMainCRTStartup). One empty C++ file fixes the link.
+    file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/${component}_crt_anchor.cpp
+        "// anchor TU so MSVC defaultlib directives pull in the CRT\n")
+    target_sources(${component} PRIVATE
+        ${CMAKE_CURRENT_BINARY_DIR}/${component}_crt_anchor.cpp)
+endif()
+
 set_property(TARGET ${component}
     PROPERTY PUBLIC_HEADER
         ${CMAKE_CURRENT_BINARY_DIR}/SnapshotUtil_ispc_stubs.h
@@ -27,7 +37,7 @@ set_property(TARGET ${component}
 file(RELATIVE_PATH relBinDir ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_BINARY_DIR})
 set_target_properties(${component} PROPERTIES
     ISPC_HEADER_SUFFIX _ispc_stubs.h
-    ISPC_HEADER_DIRECTORY /${relBinDir}
+    ISPC_HEADER_DIRECTORY ${GLOBAL_ISPC_HEADER_DIR_PREFIX}${relBinDir}
     ISPC_INSTRUCTION_SETS ${GLOBAL_ISPC_INSTRUCTION_SETS}
     # If we don't request the C++ linker, cmake will complain about
     # a missing variable CMAKE_ISPC_CREATE_SHARED_LIBRARY. This seems

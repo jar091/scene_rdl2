@@ -77,8 +77,8 @@ public:
     inline void enqUShort(const unsigned short us) { enq<unsigned short>(us); }
     inline void enqInt(const int i);              // using variable length coding internally
     inline void enqUInt(const unsigned int ui);   // using variable length coding internally
-    inline void enqLong(const long l);            // using variable length coding internally
-    inline void enqULong(const unsigned long ul); // using variable length coding internally
+    inline void enqLong(const std::int64_t l);            // using variable length coding internally
+    inline void enqULong(const std::uint64_t ul); // using variable length coding internally
     inline void enqMask32(const uint32_t mask) { enq<uint32_t>(mask); }
     inline void enqMask64(const uint64_t mask) { enq<uint64_t>(mask); }
     inline void enqFloat(const float f)    { enq<float>(f); }
@@ -114,18 +114,23 @@ public:
     template <typename T> void
     enqVector(const T &vec)
     {
+        // sizeof(typename T::value_type) rather than sizeof(vec[0]): the
+        // latter is only unevaluated in the sizeof, but vec[0] on an empty
+        // vector trips the MSVC debug STL's bounds check below.
+        const size_t elemSize = sizeof(typename T::value_type);
         void *ptr =
             getEnqDataAddr
-            (ValueContainerUtil::variableLengthLongMaxSize + sizeof(vec[0]) * vec.size());
+            (ValueContainerUtil::variableLengthLongMaxSize + elemSize * vec.size());
         ptr =
             updatePtr
             (ptr,
-             ValueContainerUtil::variableLengthEncoding(static_cast<unsigned long>(vec.size()), ptr));
+             ValueContainerUtil::variableLengthEncoding(static_cast<std::uint64_t>(vec.size()), ptr));
         VALUE_CONTAINER_ENQ_DEBUG_MSG("enqVector(" << demangle(typeid(T).name()) << ").size():>"
                                        << vec.size() << "<\n");
-        // all vec items are stored in contiguous address
-        memoryCopy(ptr, &vec[0], sizeof(vec[0]) * vec.size());
-        ptr = (void *)((uintptr_t)ptr + sizeof(vec[0]) * vec.size());
+        // all vec items are stored in contiguous address.
+        // vec.data() (not &vec[0]) so an empty vector is well defined.
+        memoryCopy(ptr, vec.data(), elemSize * vec.size());
+        ptr = (void *)((uintptr_t)ptr + elemSize * vec.size());
         updateId(ptr);
         VALUE_CONTAINER_ENQ_COUNTER(vec);
     }
@@ -160,9 +165,9 @@ public:
     //
     inline void enqVLInt(const int i);
     inline void enqVLUInt(const unsigned int ui);
-    inline void enqVLLong(const long l);
-    inline void enqVLULong(const unsigned long ul);
-    inline void enqVLSizeT(const size_t t) { enqVLULong(static_cast<unsigned long>(t)); }
+    inline void enqVLLong(const std::int64_t l);
+    inline void enqVLULong(const std::uint64_t ul);
+    inline void enqVLSizeT(const size_t t) { enqVLULong(static_cast<std::uint64_t>(t)); }
     inline void enqVLIntVector(const IntVector &vec);   // all variable length encoding internally
     inline void enqVLLongVector(const LongVector &vec); // all variable length encoding internally
 
@@ -338,7 +343,7 @@ ValueContainerEnq::enqUInt(const unsigned int ui)
 }
 
 inline void
-ValueContainerEnq::enqLong(const long l)
+ValueContainerEnq::enqLong(const std::int64_t l)
 {
     void *ptr = getEnqDataAddr(ValueContainerUtil::variableLengthLongMaxSize);
     mId += ValueContainerUtil::variableLengthEncoding(l, ptr);
@@ -347,7 +352,7 @@ ValueContainerEnq::enqLong(const long l)
 }
 
 inline void
-ValueContainerEnq::enqULong(const unsigned long ul)
+ValueContainerEnq::enqULong(const std::uint64_t ul)
 {
     void *ptr = getEnqDataAddr(ValueContainerUtil::variableLengthLongMaxSize);
     mId += ValueContainerUtil::variableLengthEncoding(ul, ptr);
@@ -396,7 +401,7 @@ ValueContainerEnq::enqFloat12(const float f0, const float f1, const float f2,
 inline void
 ValueContainerEnq::enqString(const std::string &str)
 {
-    unsigned long strLen = static_cast<unsigned long>(str.size());
+    std::uint64_t strLen = static_cast<std::uint64_t>(str.size());
     void *ptr = getEnqDataAddr(ValueContainerUtil::variableLengthLongMaxSize);
     mId += ValueContainerUtil::variableLengthEncoding(strLen, ptr);
     if (strLen) saveCharN(getEnqDataAddrUpdate(strLen), str.c_str(), str.size());
@@ -447,7 +452,7 @@ ValueContainerEnq::enqBoolVector(const BoolVector &vec)
         (ValueContainerUtil::variableLengthLongMaxSize + sizeof(char) * vec.size());
     ptr =
         updatePtr
-        (ptr, ValueContainerUtil::variableLengthEncoding(static_cast<unsigned long>(vec.size()), ptr));
+        (ptr, ValueContainerUtil::variableLengthEncoding(static_cast<std::uint64_t>(vec.size()), ptr));
     VALUE_CONTAINER_ENQ_DEBUG_MSG("enqBoolVector() vec.size():>" << vec.size() << "<\n");
     for (size_t i = 0; i < vec.size(); ++i) {
         ptr = saveChar(ptr, static_cast<char>(vec[i]));
@@ -468,12 +473,12 @@ ValueContainerEnq::enqStringVector(const StringVector &vec)
 
     VALUE_CONTAINER_ENQ_DEBUG_MSG("enqStringVector() vec.size():>" << vec.size() << "<\n");
     ptr =
-        updatePtr(ptr, ValueContainerUtil::variableLengthEncoding((unsigned long)(vec.size()), ptr));
+        updatePtr(ptr, ValueContainerUtil::variableLengthEncoding((std::uint64_t)(vec.size()), ptr));
     for (size_t i = 0; i < vec.size(); ++i) {
         const std::string &str = vec[i];
         ptr =
             updatePtr
-            (ptr, ValueContainerUtil::variableLengthEncoding((unsigned long)(str.size()), ptr));
+            (ptr, ValueContainerUtil::variableLengthEncoding((std::uint64_t)(str.size()), ptr));
         if (str.size()) ptr = saveCharN(ptr, str.c_str(), str.size());
         VALUE_CONTAINER_ENQ_DEBUG_MSG("  enqStringVector() vec[" << i << "]:>" << vec[i] << "<\n");
     }
@@ -491,7 +496,7 @@ ValueContainerEnq::enqSceneObjectVector(const SceneObjectVector &vec)
     void *ptr = getEnqDataAddr(dataSize);
 
     VALUE_CONTAINER_ENQ_DEBUG_MSG("enqSceneObjectVector() vec.size():>" << vec.size() << "<\n");
-    ptr = updatePtr(ptr, ValueContainerUtil::variableLengthEncoding((unsigned long)(vec.size()), ptr));
+    ptr = updatePtr(ptr, ValueContainerUtil::variableLengthEncoding((std::uint64_t)(vec.size()), ptr));
     for (size_t i = 0; i < vec.size(); ++i) {
         VALUE_CONTAINER_ENQ_DEBUG_MSG("  enqSceneObjectVector() vec[" << i << "]: ");
         ptr = saveSceneObjectVL(ptr, vec[i]);
@@ -510,7 +515,7 @@ ValueContainerEnq::enqSceneObjectIndexable(const SceneObjectIndexable &vec)
     void *ptr = getEnqDataAddr(dataSize);
 
     VALUE_CONTAINER_ENQ_DEBUG_MSG("enqSceneObjectIndexable() vec.size():>" << vec.size() << "<\n");
-    ptr = updatePtr(ptr, ValueContainerUtil::variableLengthEncoding((unsigned long)(vec.size()), ptr));
+    ptr = updatePtr(ptr, ValueContainerUtil::variableLengthEncoding((std::uint64_t)(vec.size()), ptr));
     for (size_t i = 0; i < vec.size(); ++i) {
         VALUE_CONTAINER_ENQ_DEBUG_MSG("  enqSceneObjectIndexable() vec[" << i << "]: ");
         ptr = saveSceneObjectVL(ptr, vec[i]);
@@ -549,7 +554,7 @@ ValueContainerEnq::enqVLUInt(const unsigned int ui)
 }
 
 inline void
-ValueContainerEnq::enqVLLong(const long l)
+ValueContainerEnq::enqVLLong(const std::int64_t l)
 {
     void *ptr = getEnqDataAddr(ValueContainerUtil::variableLengthLongMaxSize);
     mId += ValueContainerUtil::variableLengthEncoding(l, ptr);
@@ -558,7 +563,7 @@ ValueContainerEnq::enqVLLong(const long l)
 }
 
 inline void
-ValueContainerEnq::enqVLULong(const unsigned long ul)
+ValueContainerEnq::enqVLULong(const std::uint64_t ul)
 {
     void *ptr = getEnqDataAddr(ValueContainerUtil::variableLengthLongMaxSize);
     mId += ValueContainerUtil::variableLengthEncoding(ul, ptr);
@@ -574,7 +579,7 @@ ValueContainerEnq::enqVLIntVector(const IntVector &vec)
                        ValueContainerUtil::variableLengthIntMaxSize * vec.size());
     ptr =
         updatePtr
-        (ptr, ValueContainerUtil::variableLengthEncoding(static_cast<unsigned long>(vec.size()), ptr));
+        (ptr, ValueContainerUtil::variableLengthEncoding(static_cast<std::uint64_t>(vec.size()), ptr));
     VALUE_CONTAINER_ENQ_DEBUG_MSG("enqVLIntVector() vec.size():>" << vec.size() << "<\n");
     for (size_t i = 0; i < vec.size(); ++i) {
         ptr = updatePtr(ptr, ValueContainerUtil::variableLengthEncoding(vec[i], ptr));
@@ -592,13 +597,13 @@ ValueContainerEnq::enqVLLongVector(const LongVector &vec)
                        ValueContainerUtil::variableLengthLongMaxSize * vec.size());
     ptr =
         updatePtr
-        (ptr, ValueContainerUtil::variableLengthEncoding(static_cast<unsigned long>(vec.size()), ptr));
+        (ptr, ValueContainerUtil::variableLengthEncoding(static_cast<std::uint64_t>(vec.size()), ptr));
     VALUE_CONTAINER_ENQ_DEBUG_MSG("enqVLLongVector() vec.size():>" << vec.size() << "<\n");
 
     for (size_t i = 0; i < vec.size(); ++i) {
         ptr =
             updatePtr
-            (ptr, ValueContainerUtil::variableLengthEncoding(static_cast<long>(vec[i]), ptr));
+            (ptr, ValueContainerUtil::variableLengthEncoding(static_cast<std::int64_t>(vec[i]), ptr));
         VALUE_CONTAINER_ENQ_DEBUG_MSG("  enqVLLongVector() vec[" << i << "]:>" << vec[i] << "<\n");
     }
     updateId(ptr);

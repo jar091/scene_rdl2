@@ -24,7 +24,7 @@ public:
     using std::runtime_error::runtime_error;
 };
 
-class Camera : public Node
+class RDL2_EXPORT Camera : public Node
 {
 public:
     typedef Node Parent;

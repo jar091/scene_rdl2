@@ -22,6 +22,16 @@
 #include <typeinfo>
 #include <vector>
 
+#if defined(_WIN32)
+// POSIX setenv shim; the tests never rely on the overwrite=0 semantics for
+// pre-existing variables beyond "make sure it is set".
+static inline int setenv(const char* name, const char* value, int overwrite)
+{
+    if (!overwrite && std::getenv(name) != nullptr) return 0;
+    return _putenv_s(name, value);
+}
+#endif
+
 using namespace scene_rdl2::util;
 
 namespace {
@@ -180,7 +190,7 @@ void TestCommonUtil::testAlloc()
 
     using namespace scene_rdl2::alloc;
 
-    struct __attribute__ ((aligned(64))) S
+    struct alignas(64) S // portable spelling (was GCC __attribute__((aligned)))
     {
         char c;
     };
@@ -908,7 +918,7 @@ void TestCommonUtil::testSManip()
 
     // Just make sure this compiles.
     int x = 42;
-    const auto m __attribute__((unused)) = mymanip(x, 3.14, MoveOnly(82));
+    [[maybe_unused]] const auto m = mymanip(x, 3.14, MoveOnly(82));
 
     TIME_END;
 }
@@ -916,6 +926,9 @@ void TestCommonUtil::testSManip()
 void TestCommonUtil::testGUID()
 {
     TIME_START;
+
+    // Disambiguate from the unrelated Win32 ::GUID that windows.h drags in.
+    using GUID = scene_rdl2::util::GUID;
 
     const GUID g0 = GUID::littleEndian(0x78, 0x56, 0x34, 0x12, 0x34, 0x12, 0x78, 0x56, 0x12, 0x34, 0x56, 0x78, 0x12, 0x34, 0x56, 0x78);
     CPPUNIT_ASSERT(g0.asString() == "12345678-1234-5678-1234-567812345678");

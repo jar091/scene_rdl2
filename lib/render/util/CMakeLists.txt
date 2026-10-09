@@ -9,7 +9,9 @@ set(exportGroup ${PROJECT_NAME}Targets)
 add_library(${component} SHARED "")
 add_library(${PROJECT_NAME}::${component} ALIAS ${component})
 
-if(NOT IsDarwinPlatform)
+# CPU-affinity control is Linux-only (sched_setaffinity/cpu_set_t); Darwin
+# and Windows both exclude it.
+if(IsLinuxPlatform)
     set(PlatformSpecificHeaders
         CpuAffinityMask.h
         ProcCpuAffinity.h)

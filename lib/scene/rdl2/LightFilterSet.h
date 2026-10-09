@@ -26,7 +26,7 @@ namespace rdl2 {
  *
  * You can get the LightFilters as a const SceneObjectVector& with the getLightFilters() method call.
  */
-class LightFilterSet : public SceneObject
+class RDL2_EXPORT LightFilterSet : public SceneObject
 {
 public:
     typedef SceneObject Parent;

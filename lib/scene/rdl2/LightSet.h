@@ -35,7 +35,7 @@ namespace rdl2 {
  *
  * You can get the Lights as a const SceneObjectVector& with the getLights() method call.
  */
-class LightSet : public SceneObject
+class RDL2_EXPORT LightSet : public SceneObject
 {
 public:
     typedef SceneObject Parent;

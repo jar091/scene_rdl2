@@ -24,6 +24,10 @@
 #ifdef __APPLE__
 #include <libkern/OSByteOrder.h>
 #define htobe64(x) OSSwapHostToBigInt64(x)
+#elif defined(_WIN32)
+// Windows is little-endian on every supported architecture.
+#include <cstdlib>
+#define htobe64(x) _byteswap_uint64(x)
 #else
 #include <endian.h>
 #endif

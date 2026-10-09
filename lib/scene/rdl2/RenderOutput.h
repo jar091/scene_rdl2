@@ -23,7 +23,7 @@ namespace rdl2 {
  * per SceneContext.  For example, There might be a RenderOutput object for
  * the beauty render, a handful of light paths, and a diagnostic heat map.
  */
-class RenderOutput: public SceneObject
+class RDL2_EXPORT RenderOutput: public SceneObject
 {
 public:
     typedef SceneObject Parent;

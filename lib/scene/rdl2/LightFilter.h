@@ -9,7 +9,7 @@
 namespace scene_rdl2 {
 namespace rdl2 {
 
-class LightFilter : public SceneObject
+class RDL2_EXPORT LightFilter : public SceneObject
 {
 public:
     typedef SceneObject Parent;

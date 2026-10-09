@@ -17,7 +17,7 @@ namespace rdl2 {
  * through rdl2 context. This can be used for passing primitive attributes
  * or meta data with a series of UserData object.
  */
-class UserData: public SceneObject
+class RDL2_EXPORT UserData: public SceneObject
 {
 public:
     typedef SceneObject Parent;

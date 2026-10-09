@@ -30,6 +30,21 @@
 #include <unordered_set>
 #include <vector>
 
+// DLL-interface macro for classes with static data members that consumers
+// reference directly (static AttributeKeys of the built-in SceneClasses).
+// CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS exports functions but data symbols need
+// an explicit dllimport declaration on the consumer side.
+// scene_rdl2_tmp_EXPORTS is defined by CMake while building the DLL itself.
+#if defined(_WIN32)
+  #if defined(scene_rdl2_tmp_EXPORTS)
+    #define RDL2_EXPORT __declspec(dllexport)
+  #else
+    #define RDL2_EXPORT __declspec(dllimport)
+  #endif
+#else
+  #define RDL2_EXPORT
+#endif
+
 namespace moonray {
 
 namespace shading {

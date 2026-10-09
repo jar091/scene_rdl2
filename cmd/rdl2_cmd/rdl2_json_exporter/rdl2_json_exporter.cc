@@ -28,8 +28,19 @@
 #include <utility>
 #include <sys/types.h>
 #include <sys/stat.h>
+#if defined(_WIN32)
+#include <io.h>       // _access
+#define access ::_access
+#ifndef W_OK
+#define W_OK 2
+#endif
+#ifndef S_IWUSR
+#define S_IWUSR _S_IWRITE   // UCRT stat() reports owner-write via _S_IWRITE
+#endif
+#else
 #include <unistd.h>
 #include <libgen.h>
+#endif
 
 // Boost
 #include <boost/program_options.hpp>

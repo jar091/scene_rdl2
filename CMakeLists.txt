@@ -28,6 +28,12 @@ endif()
 option(${PROJECT_NAME_UPPER}_BUILD_TESTING
     "Whether or not to build the unittests" YES)
 
+option(${PROJECT_NAME_UPPER}_BUILD_PYTHON_BINDINGS
+    "Whether or not to build the Boost.Python bindings (mod/python)" YES)
+
+option(${PROJECT_NAME_UPPER}_BUILD_GRID_UTIL
+    "Whether or not to build common_grid_util and the mcrt_cmd diagnostic tools (POSIX sockets/shm/NUMA; not ported to Windows yet)" YES)
+
 option(ABI_SET_VERSION "Enable the abi-version option" OFF)
 if(ABI_SET_VERSION)
     set(ABI_VERSION "6" CACHE STRING "If ABI_SET_VERSION is on, which version to set")
@@ -37,6 +43,11 @@ endif()
 # Find dependencies
 # ================================================
 set(BUILD_SHARED_LIBS ON)
+if(MSVC)
+    # Interim DLL-export strategy for the Windows port: export everything
+    # until per-library export macros land (docs/WINDOWS_PORT.md item 10).
+    set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+endif()
 find_package(Boost REQUIRED
     COMPONENTS
         filesystem
@@ -56,7 +67,10 @@ if(LUA_FOUND AND NOT TARGET Lua::lua)
 endif()
 
 find_package(CppUnit REQUIRED)
-find_package(OpenSSL REQUIRED)
+if(${PROJECT_NAME_UPPER}_BUILD_GRID_UTIL)
+    # OpenSSL is only consumed by common_grid_util (PackTiles sha1).
+    find_package(OpenSSL REQUIRED)
+endif()
 find_package(JsonCpp REQUIRED)
 find_package(Log4cplus REQUIRED)
 find_package(Python COMPONENTS Interpreter Development)
@@ -93,7 +107,22 @@ endif()
 
 # Create include/${PACKAGE_NAME} link in the build directory for generated headers.
 file(MAKE_DIRECTORY ${PROJECT_BINARY_DIR}/include)
-file(CREATE_LINK ../lib ${PROJECT_BINARY_DIR}/include/${PACKAGE_NAME} SYMBOLIC)
+if(WIN32)
+    # Symbolic links need privileges (or Developer Mode) on Windows; an NTFS
+    # directory junction provides the same aliasing without either.
+    if(NOT EXISTS ${PROJECT_BINARY_DIR}/include/${PACKAGE_NAME})
+        file(MAKE_DIRECTORY ${PROJECT_BINARY_DIR}/lib)
+        file(TO_NATIVE_PATH "${PROJECT_BINARY_DIR}/include/${PACKAGE_NAME}" _linkNative)
+        file(TO_NATIVE_PATH "${PROJECT_BINARY_DIR}/lib" _targetNative)
+        execute_process(COMMAND cmd /c mklink /J "${_linkNative}" "${_targetNative}"
+            OUTPUT_QUIET RESULT_VARIABLE _junctionResult)
+        if(NOT _junctionResult EQUAL 0)
+            message(FATAL_ERROR "Failed to create junction ${_linkNative} -> ${_targetNative}")
+        endif()
+    endif()
+else()
+    file(CREATE_LINK ../lib ${PROJECT_BINARY_DIR}/include/${PACKAGE_NAME} SYMBOLIC)
+endif()
 
 include(${PROJECT_NAME}CompileDefinitions)
 include(${PROJECT_NAME}CompileFeatures)
@@ -106,7 +135,9 @@ include(SConscriptStub)
 # ================================================
 add_subdirectory(lib)
 add_subdirectory(cmd)
-add_subdirectory(mod)
+if(${PROJECT_NAME_UPPER}_BUILD_PYTHON_BINDINGS)
+    add_subdirectory(mod)
+endif()
 if(GLD STREQUAL "$ENV{STUDIO}")
     add_subdirectory(bart_tools)
     if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)

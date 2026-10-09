@@ -72,7 +72,7 @@ TestCacheUtil::testLongVectorCA()
                [&](CacheEnqueue &cEnq) -> size_t { // enqFunc
                    CacheUtil::enqLongVector(cEnq, vec);
                    return (ValueContainerUtil::variableLengthEncodingSize(vec.size()) +
-                           sizeof(long) * vec.size());
+                           sizeof(CacheUtil::LongVecCA::value_type) * vec.size()); // int64_t, not `long` (32-bit on LLP64)
                },
                [&](CacheDequeue &cDeq) { // non-setAddrOnly mode deq test
                    CacheUtil::LongVecCA deqVec = CacheUtil::deqLongVector(cDeq, false);

@@ -6,10 +6,26 @@
 
 #include <string>
 #include <utility>
+#if defined(_WIN32)
+#include <io.h>       // _close
+#else
 #include <unistd.h>
+#endif
 
 namespace scene_rdl2 {
 namespace util {
+
+/**
+ * Separator between entries of a search-path string: ':' on POSIX, ';' on
+ * Windows (where ':' appears inside drive-letter paths). Producers
+ * (rdl2::DsoFinder) and consumers (findFile, SceneContext) must agree on
+ * this single constant.
+ */
+#if defined(_WIN32)
+constexpr char kSearchPathSeparator = ';';
+#else
+constexpr char kSearchPathSeparator = ':';
+#endif
 
 /**
  * RAII guard that wraps a file descriptor. The descriptor will always be
@@ -30,7 +46,11 @@ struct FileDescriptorGuard
 
     ~FileDescriptorGuard()
     {
+#if defined(_WIN32)
+        _close(fd);
+#else
         close(fd);
+#endif
     }
 
     const int fd;
@@ -120,7 +140,15 @@ void copyFile(const std::string& src, const std::string& dst);
  */
 inline bool isAbsolute(const std::string& filePath)
 {
+#if defined(_WIN32)
+    // Drive-letter ("C:\", "C:/") and UNC/rooted ("\\server", "\", "/")
+    // forms are absolute for the purpose of "do not prepend a directory".
+    if (filePath.empty()) return false;
+    if (filePath[0] == '/' || filePath[0] == '\\') return true;
+    return filePath.size() >= 2 && filePath[1] == ':';
+#else
     return !filePath.empty() && filePath[0] == '/';
+#endif
 }
 
 /**

@@ -33,7 +33,7 @@ typedef int PrimitiveAttributeKey;
 class Shader;
 using ShaderLogEventRegistry = logging::LogEventRegistry<Shader>;
 
-class Shader : public SceneObject
+class RDL2_EXPORT Shader : public SceneObject
 {
 public:
     Shader(const SceneClass& sceneClass, const std::string& name)

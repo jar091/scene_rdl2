@@ -195,7 +195,7 @@ protected:
     {
         for (size_t tileId = 0; tileId < partialMergeTilesTbl.size(); ++tileId) {
             if (partialMergeTilesTbl[tileId]) {
-                uint pixOffset = static_cast<uint>(tileId << 6);
+                unsigned int pixOffset = static_cast<unsigned int>(tileId << 6);
                 resetTileFunc(pixOffset);
             }
         }

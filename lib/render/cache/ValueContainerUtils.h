@@ -10,6 +10,7 @@
 #include <scene_rdl2/common/math/Mat3.h>
 #include <scene_rdl2/common/math/Mat4.h>
 
+#include <cstdint>
 #include <deque>
 #include <string>
 
@@ -39,7 +40,7 @@ using Mat4d = math::Mat4<math::Vec4<double>>;
 using BoolVector = std::deque<bool>;
 using IntVector = std::vector<int>;
 using UIntVector = std::vector<unsigned int>;
-using LongVector = std::vector<long>;
+using LongVector = std::vector<std::int64_t>;
 using FloatVector = std::vector<float>;
 using DoubleVector = std::vector<double>;
 using StringVector = std::vector<std::string>;
@@ -116,17 +117,39 @@ public:
     static inline size_t variableLengthDecoding(const void *in, int &i);
     static inline size_t variableLengthEncodingSize(int i); // return encoded data size only
 
-    // 64bit unsigned long                          0 ~ 18,446,744,073,709,551,615 -> 1byte ~ 10byte
-    // 64bit long          -9,223,372,036,854,775,808 ~  9,223,372,036,854,775,807 -> 1byte ~ 10byte
+    // 64bit uint64_t                               0 ~ 18,446,744,073,709,551,615 -> 1byte ~ 10byte
+    // 64bit int64_t       -9,223,372,036,854,775,808 ~  9,223,372,036,854,775,807 -> 1byte ~ 10byte
+    // (fixed-width types: `long` is 32-bit on LLP64/Windows, which truncates
+    //  and makes the `>> 63` in zigZagEncoding undefined behavior)
     static constexpr size_t variableLengthLongMaxSize = 10;
 
-    static inline size_t variableLengthEncoding(unsigned long ul, void *out);
-    static inline size_t variableLengthDecoding(const void *in, unsigned long &ul);
-    static inline size_t variableLengthEncodingSize(unsigned long ul); // return encoded data size only
+    static inline size_t variableLengthEncoding(std::uint64_t ul, void *out);
+    static inline size_t variableLengthDecoding(const void *in, std::uint64_t &ul);
+    static inline size_t variableLengthEncodingSize(std::uint64_t ul); // return encoded data size only
 
-    static inline size_t variableLengthEncoding(long l, void *out);
-    static inline size_t variableLengthDecoding(const void *in, long &l);
-    static inline size_t variableLengthEncodingSize(long l); // return encoded data size only
+    static inline size_t variableLengthEncoding(std::int64_t l, void *out);
+    static inline size_t variableLengthDecoding(const void *in, std::int64_t &l);
+    static inline size_t variableLengthEncodingSize(std::int64_t l); // return encoded data size only
+
+    // Apple's LP64 is the one model where `long` is 64-bit but std::uint64_t
+    // is `unsigned long long`, so a size_t (= unsigned long) argument matches
+    // none of the overloads above exactly and every such call is ambiguous
+    // ("call to 'variableLengthEncodingSize' is ambiguous", four candidates).
+    // On Linux std::uint64_t *is* `unsigned long`, and on Windows `unsigned
+    // long` is 32-bit and already covered by the `unsigned int` overload - in
+    // both cases these would be a redefinition rather than a fix, hence the
+    // guard. They forward, so there is one implementation per width.
+#if defined(__APPLE__)
+    static inline size_t variableLengthEncoding(unsigned long ul, void *out)
+    { return variableLengthEncoding(static_cast<std::uint64_t>(ul), out); }
+    static inline size_t variableLengthEncodingSize(unsigned long ul)
+    { return variableLengthEncodingSize(static_cast<std::uint64_t>(ul)); }
+
+    static inline size_t variableLengthEncoding(long l, void *out)
+    { return variableLengthEncoding(static_cast<std::int64_t>(l), out); }
+    static inline size_t variableLengthEncodingSize(long l)
+    { return variableLengthEncodingSize(static_cast<std::int64_t>(l)); }
+#endif
 
     static inline size_t alignedSize(const size_t byte, const size_t align);
     static inline bool isAlignedSize(const size_t byte, const size_t align);
@@ -177,8 +200,8 @@ public:
     //
     static inline unsigned int zigZagEncoding(const int i) { return (i >> 31) ^ (i << 1); }
     static inline int zigZagDecoding(const unsigned int ui) { return (ui >> 1) ^ -(ui & 1); }
-    static inline unsigned long zigZagEncoding(const long l) { return (l >> 63) ^ (l << 1); }
-    static inline long zigZagDecoding(const unsigned long ul) { return (ul >> 1) ^ -(ul & 1); }
+    static inline std::uint64_t zigZagEncoding(const std::int64_t l) { return (l >> 63) ^ (l << 1); }
+    static inline std::int64_t zigZagDecoding(const std::uint64_t ul) { return (ul >> 1) ^ -(ul & 1); }
 };
 
 // static function
@@ -278,7 +301,7 @@ ValueContainerUtil::variableLengthEncodingSize(int i)
 
 // static function
 inline size_t
-ValueContainerUtil::variableLengthEncoding(unsigned long ul, void *outPtr)
+ValueContainerUtil::variableLengthEncoding(std::uint64_t ul, void *outPtr)
 {
     char *out = static_cast<char *>(outPtr);
 
@@ -294,7 +317,7 @@ ValueContainerUtil::variableLengthEncoding(unsigned long ul, void *outPtr)
 
 // static function
 inline size_t
-ValueContainerUtil::variableLengthDecoding(const void *inPtr, unsigned long &ul)
+ValueContainerUtil::variableLengthDecoding(const void *inPtr, std::uint64_t &ul)
 {
     const char *in = static_cast<const char *>(inPtr);
 
@@ -303,7 +326,7 @@ ValueContainerUtil::variableLengthDecoding(const void *inPtr, unsigned long &ul)
     int shift = 0;
     while (1) {
         size++;
-        ul |= static_cast<unsigned long>((*in) & 0x7f) << shift;
+        ul |= static_cast<std::uint64_t>((*in) & 0x7f) << shift;
         if (!(*in++ & 0x80)) break;
         shift += 7;
     }
@@ -312,7 +335,7 @@ ValueContainerUtil::variableLengthDecoding(const void *inPtr, unsigned long &ul)
 
 // static function
 inline size_t
-ValueContainerUtil::variableLengthEncodingSize(unsigned long ul)
+ValueContainerUtil::variableLengthEncodingSize(std::uint64_t ul)
 {
     size_t size = 0;
     while (ul > 0x7f) {
@@ -324,11 +347,11 @@ ValueContainerUtil::variableLengthEncodingSize(unsigned long ul)
 
 // static function
 inline size_t
-ValueContainerUtil::variableLengthEncoding(long l, void *outPtr)
+ValueContainerUtil::variableLengthEncoding(std::int64_t l, void *outPtr)
 {
     char *out = static_cast<char *>(outPtr);
 
-    unsigned long ul = zigZagEncoding(l);
+    std::uint64_t ul = zigZagEncoding(l);
     size_t size = 0;
     while (ul > 0x7f) {
         *out++ = static_cast<char>((ul & 0x7f) | 0x80);
@@ -341,16 +364,16 @@ ValueContainerUtil::variableLengthEncoding(long l, void *outPtr)
 
 // static function
 inline size_t
-ValueContainerUtil::variableLengthDecoding(const void *inPtr, long &l)
+ValueContainerUtil::variableLengthDecoding(const void *inPtr, std::int64_t &l)
 {
     const char *in = static_cast<const char *>(inPtr);
 
-    unsigned long ul = 0x0;
+    std::uint64_t ul = 0x0;
     size_t size = 0;
     int shift = 0;
     while (1) {
         size++;
-        ul |= static_cast<unsigned long>((*in) & 0x7f) << shift;
+        ul |= static_cast<std::uint64_t>((*in) & 0x7f) << shift;
         if (!(*in++ & 0x80)) break;
         shift += 7;
     }
@@ -360,9 +383,9 @@ ValueContainerUtil::variableLengthDecoding(const void *inPtr, long &l)
 
 // static function
 inline size_t
-ValueContainerUtil::variableLengthEncodingSize(long l)
+ValueContainerUtil::variableLengthEncodingSize(std::int64_t l)
 {
-    unsigned long ul = zigZagEncoding(l);
+    std::uint64_t ul = zigZagEncoding(l);
     size_t size = 0;
     while (ul > 0x7f) {
         ul >>= 7;

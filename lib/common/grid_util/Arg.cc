@@ -3,6 +3,7 @@
 #include "Arg.h"
 #include "TlSvr.h"
 
+#include <scene_rdl2/common/platform/Platform.h> // MNRY_ASSERT
 #include <scene_rdl2/render/util/StrUtil.h>
 
 #include <cstdint>
@@ -166,10 +167,19 @@ Arg::msg(const std::string &msg) const
         std::cerr << msg;
     }
 
+#if !defined(_WIN32)
     if (mTlSvr) {
         // output to TlSvr if necessary
         if (!mTlSvr->send(msg)) flag = false; // blocking function
     }
+#else
+    // TlSvr (the telnet server) is a POSIX-socket implementation and is not
+    // built on Windows, so TlSvr::send() has no definition to link against.
+    // mTlSvr is unconditionally nullptr here: no Windows caller can create a
+    // TlSvr object either (it would fail to link), so this branch is dead
+    // code rather than a suppressed behavior. See docs/WINDOWS_PORT.md.
+    MNRY_ASSERT(!mTlSvr);
+#endif
 
     // output to msgHandler if necessary
     if (mMsgHandler) {

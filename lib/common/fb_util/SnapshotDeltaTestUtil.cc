@@ -8,12 +8,13 @@
 #include <scene_rdl2/common/fb_util/SnapshotUtil.h>
 #include <scene_rdl2/render/util/StrUtil.h>
 
+#include <scene_rdl2/common/platform/Platform.h> // util::alignedMalloc
+
 #include <cstring> // memcpy
 #include <cstdlib> // abort
 #include <fstream>
 #include <iomanip>
 #include <iostream>
-#include <stdlib.h> // posix_memalign
 #include <sys/stat.h> // stat()
 #include <type_traits> // is_same
 
@@ -555,8 +556,7 @@ SnapshotDeltaTestUtil<T, W>::allocVecValueAlign(const std::vector<T>& vec)
     static constexpr size_t alignedSize = 4096; // typical page size of x86-64 processors
 
     size_t size = vec.size() * sizeof(T);
-    void* addr;
-    posix_memalign(&addr, alignedSize, size);
+    void* addr = scene_rdl2::util::alignedMalloc(size, alignedSize);
 
     std::memcpy(addr, &vec[0], size);
     return addr;
@@ -569,8 +569,7 @@ SnapshotDeltaTestUtil<T, W>::allocVecWeightAlign(const std::vector<W>& vec)
     static constexpr size_t alignedSize = 4096; // typical page size of x86-64 processors
 
     size_t size = vec.size() * sizeof(W);
-    void* addr;
-    posix_memalign(&addr, alignedSize, size);
+    void* addr = scene_rdl2::util::alignedMalloc(size, alignedSize);
 
     std::memcpy(addr, &vec[0], size);
     return addr;
@@ -583,8 +582,7 @@ SnapshotDeltaTestUtil<T, W>::allocVecValueAlign(size_t w, size_t h, size_t numCh
     static constexpr size_t alignedSize = 4096;
 
     size_t size = w * h * numChan * sizeof(T);
-    void* addr;
-    posix_memalign(&addr, alignedSize, size);
+    void* addr = scene_rdl2::util::alignedMalloc(size, alignedSize);
     return addr;
 }
 
@@ -595,8 +593,7 @@ SnapshotDeltaTestUtil<T, W>::allocVecWeightAlign(size_t w, size_t h)
     static constexpr size_t alignedSize = 4096;
 
     size_t size = w * h * sizeof(W);
-    void* addr;
-    posix_memalign(&addr, alignedSize, size);
+    void* addr = scene_rdl2::util::alignedMalloc(size, alignedSize);
     return addr;
 }
 

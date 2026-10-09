@@ -207,16 +207,19 @@ TestFiles::testFindFile()
     ofs1 << "content";
     ofs1.close();
 
-    // Test finding file in search path
+    // Test finding file in search path (platform separator: ':' would split
+    // Windows drive-letter paths apart)
     {
-        std::string searchPath = dir1 + ":" + dir2 + ":" + dir3;
+        const std::string sep(1, kSearchPathSeparator);
+        std::string searchPath = dir1 + sep + dir2 + sep + dir3;
         std::string result = findFile("test.txt", searchPath);
         CPPUNIT_ASSERT_EQUAL(file1, result);
     }
 
     // Test file not found
     {
-        std::string searchPath = dir1 + ":" + dir3;
+        const std::string sep(1, kSearchPathSeparator);
+        std::string searchPath = dir1 + sep + dir3;
         std::string result = findFile("test.txt", searchPath);
         CPPUNIT_ASSERT_EQUAL(std::string(""), result);
     }

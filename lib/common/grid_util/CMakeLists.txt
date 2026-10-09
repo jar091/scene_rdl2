@@ -9,66 +9,89 @@ set(exportGroup ${PROJECT_NAME}Targets)
 add_library(${component} SHARED "")
 add_library(${PROJECT_NAME}::${component} ALIAS ${component})
 
+# Sources and public headers that need POSIX sockets, System V shared memory,
+# libnuma or CPU-affinity APIs. Windows has none of them and gets the portable
+# subset of the library (see docs/WINDOWS_PORT.md); Darwin does have them, and
+# the files that differ there carry their own PLATFORM_APPLE branches, so it
+# builds the full set exactly as Linux does. The gate has to agree with the
+# `#if !defined(_WIN32)` in Arg.cc, which calls TlSvr::send().
+set(PlatformSpecificSources)
+set(PlatformSpecificPublicHeaders)
+if(NOT IsWindowsPlatform)
+    set(PlatformSpecificSources
+        AffinityMapTable.cc         # <pwd.h>, <sys/ipc.h>, Pipe/Process
+        AffinityResourceControl.cc  # NUMA + CPU affinity
+        CpuSocketUtil.cc            # /proc CPU topology
+        DebugConsoleDriver.cc       # TlSvr (sockets)
+        NumaUtil.cc                 # <sys/mman.h>, libnuma, syscall()
+        Pipe.cc                     # popen/pclose
+        Process.cc                  # <sys/types.h> pid_t, signal()
+        ShmAffinityInfo.cc          # <sys/shm.h>
+        ShmData.cc                  # <sys/shm.h>, <pwd.h>
+        ShmFb.cc                    # ShmData
+        ShmFbOutput.cc              # ShmFb + TlSvr
+        ShmFootmark.cc              # <sys/shm.h>, <sys/time.h>
+        SockUtil.cc                 # <sys/socket.h>
+        TlSvr.cc                    # <sys/socket.h>, <netinet/in.h>
+        UserUtil.cc                 # <pwd.h>, getuid()
+    )
+    set(PlatformSpecificPublicHeaders
+        AffinityResourceControl.h
+        CpuSocketUtil.h
+        DebugConsoleDriver.h
+        NumaUtil.h
+        ShmData.h
+        ShmFb.h
+        ShmFbOutput.h
+        ShmFootmark.h
+        SockUtil.h
+        UserUtil.h
+    )
+endif()
+
 target_sources(${component}
     PRIVATE
         ActiveBitTable.cc
         ActivePixelsArray.cc
-        AffinityMapTable.cc
-	AffinityResourceControl.cc
         Arg.cc
-	BinPacketDictionary.cc
-	CpuSocketUtil.cc
-        DebugConsoleDriver.cc
+        BinPacketDictionary.cc
         Fb.cc
         FbActivePixels.cc
         FbAov.cc
         FbReferenceType.cc
         Fb_accumulate.cc
         Fb_conv888.cc
-	Fb_copy.cc
-	Fb_fbd.cc
+        Fb_copy.cc
+        Fb_fbd.cc
         Fb_get.cc
-	Fb_minusOne.cc
-	Fb_ppm.cc
+        Fb_minusOne.cc
+        Fb_ppm.cc
         Fb_setup.cc
         Fb_snapshotDelta.cc
         Fb_untile.cc
         FloatValueTracker.cc
         LatencyLog.cc
-	NumaUtil.cc
         PackActiveTiles.cc
         PackTiles.cc
         PackTilesPassPrecision.cc
         PackTilesTest.cc
         Parser.cc
         PathVisSimGlobalInfo.cc
-        Pipe.cc
-	PixelBufferSha1Hash.cc
-	Process.cc
-	ProgressiveFrameBufferName.cc
+        PixelBufferSha1Hash.cc
+        ProgressiveFrameBufferName.cc
         RenderPrepStats.cc
         RunLenBitTable.cc
         Sha1Util.cc
-	ShmAffinityInfo.cc
-        ShmData.cc
-	ShmFb.cc
-	ShmFbOutput.cc
-	ShmFootmark.cc
-        SockUtil.cc
-        TlSvr.cc
-	UserUtil.cc
-	VectorPacket.cc
-	VectorPacketDictionary.cc
+        VectorPacket.cc
+        VectorPacketDictionary.cc
+        ${PlatformSpecificSources}
 )
 
 set_property(TARGET ${component}
     PROPERTY PUBLIC_HEADER
         ActivePixelsArray.h
-	AffinityResourceControl.h
         Arg.h
-	BinPacketDictionary.h
-	CpuSocketUtil.h
-        DebugConsoleDriver.h
+        BinPacketDictionary.h
         Fb.h
         FbActivePixels.h
         FbActivePixelsAov.h
@@ -77,26 +100,20 @@ set_property(TARGET ${component}
         FloatValueTracker.h
         LatencyLog.h
         LiteralUtil.h
-	NumaUtil.h
         PackActiveTiles.h
         PackTiles.h
         PackTilesPassPrecision.h
         PackTilesTest.h
         Parser.h
-	PathVisSimGlobalInfo.h
-	ProgressiveFrameBufferName.h
+        PathVisSimGlobalInfo.h
+        ProgressiveFrameBufferName.h
         RenderPrepStats.h
         RunLenBitTable.h
         Sha1Util.h
-	ShmData.h
-	ShmFb.h
-	ShmFbOutput.h
-	ShmFootmark.h
-        SockUtil.h
         TlSvr.h
-	UserUtil.h
-	VectorPacket.h
-	VectorPacketDictionary.h
+        VectorPacket.h
+        VectorPacketDictionary.h
+        ${PlatformSpecificPublicHeaders}
 )
 
 target_include_directories(${component}

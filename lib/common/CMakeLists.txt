@@ -3,7 +3,9 @@
 
 add_subdirectory(except)
 add_subdirectory(fb_util)
-add_subdirectory(grid_util)
+if(${PROJECT_NAME_UPPER}_BUILD_GRID_UTIL)
+    add_subdirectory(grid_util)
+endif()
 add_subdirectory(math)
 add_subdirectory(platform)
 add_subdirectory(rec_time)

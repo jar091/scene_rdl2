@@ -53,6 +53,26 @@ function(make_test_dso name)
     moonray_dso_simple(${name} SKIP_INSTALL TEST_DSO SOURCE_DIR ${name} DEPENDENCIES SceneRdl2::scene_rdl2)
 endfunction()
 
+if(IsWindowsPlatform)
+    # The LibLaden* DSOs reference ImaginaryThing::doTheThing() with no
+    # implementation on purpose: on ELF/Mach-O the full DSO links but fails
+    # at load/bind time, which is what the proxy tests verify. A Windows DLL
+    # cannot link with unresolved symbols, so the implementation lives in a
+    # helper DLL that is deliberately kept OFF the loader search path:
+    # linking succeeds, loading the full DSO still fails (missing dependent
+    # DLL) while the proxy (not linked against it) loads fine.
+    file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/ImaginaryLibImpl.cpp
+        "#include \"ImaginaryLib.h\"\nvoid ImaginaryThing::doTheThing() {}\n")
+    add_library(ImaginaryLib SHARED ${CMAKE_CURRENT_BINARY_DIR}/ImaginaryLibImpl.cpp)
+    target_include_directories(ImaginaryLib PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+    set_target_properties(ImaginaryLib PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/imaginary_lib_off_path)
+
+    function(link_imaginary_lib name)
+        target_link_libraries(${name} PUBLIC ImaginaryLib)
+    endfunction()
+endif()
+
 make_test_dso(BadObject)
 make_test_dso(DeclareAndCreateObject)
 make_test_dso(DeclareAndDestroyObject)
@@ -73,6 +93,14 @@ make_test_dso(LibLadenLight)
 make_test_dso(LibLadenMap)
 make_test_dso(LibLadenMaterial)
 make_test_dso(LibLadenNormalMap)
+if(IsWindowsPlatform)
+    foreach(_libladen
+            LibLadenCamera LibLadenDisplayFilter LibLadenDwaBaseLayerable
+            LibLadenEnvMap LibLadenGeometry LibLadenLightFilter LibLadenLight
+            LibLadenMap LibLadenMaterial LibLadenNormalMap)
+        link_imaginary_lib(${_libladen})
+    endforeach()
+endif()
 make_test_dso(ThrowDuringConstruct)
 make_test_dso(ThrowDuringDeclare)
 make_test_dso(UpdateTracker)

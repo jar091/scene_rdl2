@@ -13,6 +13,18 @@
 
 #include <string>
 
+// Platform DSO suffix and search-path separator (mirror scene_rdl2::Dso and
+// util::kSearchPathSeparator).
+#if defined(_WIN32)
+#define DSO_EXT ".dll"
+#define DSO_EXT_UPPER ".DLL"
+#define SEP ";"
+#else
+#define DSO_EXT ".so"
+#define DSO_EXT_UPPER ".SO"
+#define SEP ":"
+#endif
+
 namespace scene_rdl2 {
 namespace rdl2 {
 namespace unittest {
@@ -31,10 +43,10 @@ void
 TestDso::testGetFilePath()
 {
     Dso dso("ExampleObject", ".", false);
-    CPPUNIT_ASSERT(dso.getFilePath() == "./ExampleObject.so");
+    CPPUNIT_ASSERT(dso.getFilePath() == "./ExampleObject" DSO_EXT);
 
     Dso proxy("ExtensiveObject", ".", true);
-    CPPUNIT_ASSERT(proxy.getFilePath() == "./ExtensiveObject.so.proxy");
+    CPPUNIT_ASSERT(proxy.getFilePath() == "./ExtensiveObject" DSO_EXT ".proxy");
 }
 
 void
@@ -42,42 +54,42 @@ TestDso::testIsValidDso()
 {
     // Reject bad filenames.
     CPPUNIT_ASSERT(!Dso::isValidDso("", false));
-    CPPUNIT_ASSERT(!Dso::isValidDso(".so", false));
+    CPPUNIT_ASSERT(!Dso::isValidDso(DSO_EXT, false));
     CPPUNIT_ASSERT(!Dso::isValidDso("rdl2_test", false));
     CPPUNIT_ASSERT(!Dso::isValidDso("", true));
-    CPPUNIT_ASSERT(!Dso::isValidDso(".so.proxy", true));
+    CPPUNIT_ASSERT(!Dso::isValidDso(DSO_EXT ".proxy", true));
     CPPUNIT_ASSERT(!Dso::isValidDso("rdl2_test", true));
 
     // Non-RDL .so's should not be valid.
-    CPPUNIT_ASSERT(!Dso::isValidDso("BadObject.so", false));
-    CPPUNIT_ASSERT(!Dso::isValidDso("BadObject.so.proxy", true));
+    CPPUNIT_ASSERT(!Dso::isValidDso("BadObject" DSO_EXT, false));
+    CPPUNIT_ASSERT(!Dso::isValidDso("BadObject" DSO_EXT ".proxy", true));
 
     // Good DSOs should work, regardless of path or extension case.
-    CPPUNIT_ASSERT(Dso::isValidDso("ExampleObject.so", false));
-    CPPUNIT_ASSERT(Dso::isValidDso("./ExampleObject.so", false));
-    CPPUNIT_ASSERT(Dso::isValidDso("ExampleObject.SO", false));
-    CPPUNIT_ASSERT(Dso::isValidDso("ExampleObject.so.proxy", true));
-    CPPUNIT_ASSERT(Dso::isValidDso("./ExampleObject.so.proxy", true));
-    CPPUNIT_ASSERT(Dso::isValidDso("ExampleObject.SO.PROXY", true));
+    CPPUNIT_ASSERT(Dso::isValidDso("ExampleObject" DSO_EXT, false));
+    CPPUNIT_ASSERT(Dso::isValidDso("./ExampleObject" DSO_EXT, false));
+    CPPUNIT_ASSERT(Dso::isValidDso("ExampleObject" DSO_EXT_UPPER, false));
+    CPPUNIT_ASSERT(Dso::isValidDso("ExampleObject" DSO_EXT ".proxy", true));
+    CPPUNIT_ASSERT(Dso::isValidDso("./ExampleObject" DSO_EXT ".proxy", true));
+    CPPUNIT_ASSERT(Dso::isValidDso("ExampleObject" DSO_EXT_UPPER ".PROXY", true));
 }
 
 void
 TestDso::testFindDso()
 {
     // Location of the correct path shouldn't matter.
-    CPPUNIT_ASSERT(util::findFile("ExampleObject.so", "..:.:ref") == "./ExampleObject.so");
-    CPPUNIT_ASSERT(util::findFile("ExampleObject.so", ".:..:ref") == "./ExampleObject.so");
-    CPPUNIT_ASSERT(util::findFile("ExampleObject.so", "ref:..:.") == "./ExampleObject.so");
+    CPPUNIT_ASSERT(util::findFile("ExampleObject" DSO_EXT, ".." SEP "." SEP "ref") == "./ExampleObject" DSO_EXT);
+    CPPUNIT_ASSERT(util::findFile("ExampleObject" DSO_EXT, "." SEP ".." SEP "ref") == "./ExampleObject" DSO_EXT);
+    CPPUNIT_ASSERT(util::findFile("ExampleObject" DSO_EXT, "ref" SEP ".." SEP ".") == "./ExampleObject" DSO_EXT);
 
     // Single directory search paths should work.
-    CPPUNIT_ASSERT(util::findFile("ExampleObject.so", ".") == "./ExampleObject.so");
+    CPPUNIT_ASSERT(util::findFile("ExampleObject" DSO_EXT, ".") == "./ExampleObject" DSO_EXT);
 
     // If the DSO can't be found, it should return an empty string.
-    CPPUNIT_ASSERT(util::findFile("ExampleObject.so", "ref").empty());
-    CPPUNIT_ASSERT(util::findFile("Nonexistent.so", ".").empty());
+    CPPUNIT_ASSERT(util::findFile("ExampleObject" DSO_EXT, "ref").empty());
+    CPPUNIT_ASSERT(util::findFile("Nonexistent" DSO_EXT, ".").empty());
 
     // An empty search path shouldn't find anything.
-    CPPUNIT_ASSERT(util::findFile("ExampleObject.so", "").empty());
+    CPPUNIT_ASSERT(util::findFile("ExampleObject" DSO_EXT, "").empty());
 }
 
 void

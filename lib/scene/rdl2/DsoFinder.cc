@@ -5,6 +5,7 @@
 #include "DsoFinder.h"
 
 #include <scene_rdl2/render/util/Args.h>
+#include <scene_rdl2/render/util/Files.h>
 #include <scene_rdl2/render/util/GetEnv.h>
 
 #include <cstdlib>
@@ -17,11 +18,11 @@ namespace rdl2 {
 
 #ifdef _WIN32
 static const std::string sRaasRender("moonray.exe");
-static const std::string sOsPathSep(";");
 #else
 static const std::string sRaasRender("moonray");
-static const std::string sOsPathSep(":");
 #endif
+// Single source of truth shared with the consumers (findFile, SceneContext).
+static const std::string sOsPathSep(1, util::kSearchPathSeparator);
 
 using util::Args;
 

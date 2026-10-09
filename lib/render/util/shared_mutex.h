@@ -8,6 +8,24 @@
 #include <cerrno>
 #include <mutex>
 #include <system_error>
+
+#if defined(_WIN32)
+
+// No pthreads on Windows; the C++17 standard types provide the same
+// contract this header emulates ("fauxstd") on POSIX.
+#include <shared_mutex>
+
+namespace fauxstd {
+
+using shared_mutex = std::shared_mutex;
+
+template <typename Mutex>
+using shared_lock = std::shared_lock<Mutex>;
+
+} // namespace fauxstd
+
+#else
+
 #include <pthread.h>
 
 
@@ -227,4 +245,6 @@ private:
 };
 
 } // namespace fauxstd
+
+#endif // !_WIN32
 

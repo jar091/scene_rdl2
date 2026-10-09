@@ -7,7 +7,9 @@
 #include <iomanip>
 #include <sstream>
 
+#if !defined(_MSC_VER)
 #include <cxxabi.h>
+#endif
 
 #ifdef __GNUC__
   #define ATTR_UNUSED __attribute__((unused))
@@ -181,8 +183,14 @@ inline
 std::string
 demangle(const std::string &str)
 {
+#if defined(_MSC_VER)
+    // MSVC's type_info::name() is already human-readable; there is no
+    // Itanium-ABI mangling to undo.
+    return str;
+#else
     int st;
     return std::string(std::move(abi::__cxa_demangle(str.c_str(), 0, 0, &st)));
+#endif
 }
 
 inline

@@ -44,7 +44,7 @@ enum class PrimitiveAttributeFrame {
 };
 
 
-class Geometry : public Node
+class RDL2_EXPORT Geometry : public Node
 {
 public:
     typedef Node Parent;

@@ -55,7 +55,9 @@ public:
     // vector), but we can still look the index up in constant time.
     //
     // We use two containers for bidirectional lookup.
-    typedef std::unordered_multimap<typename hasher::result_type, int32_t>  map_type;
+    // std::hash::result_type was removed in C++20; the hash result is
+    // std::size_t by definition.
+    typedef std::unordered_multimap<std::size_t, int32_t>                   map_type;
     typedef T                                                               value_type;
     typedef typename container_type::allocator_type                         allocator_type;
     typedef typename container_type::size_type                              size_type;

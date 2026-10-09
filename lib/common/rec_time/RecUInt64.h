@@ -1,4 +1,4 @@
-// Copyright 2023-2024 DreamWorks Animation LLC
+﻿// Copyright 2023-2024 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
 
 //
@@ -8,7 +8,7 @@
 namespace scene_rdl2 {
 namespace rec_time {
 
-class __attribute__((aligned(64))) RecUInt64Log
+class alignas(64) RecUInt64Log
 //
 // Simple logging for uint64 value
 //

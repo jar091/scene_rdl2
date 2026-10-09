@@ -478,7 +478,10 @@ private:
     {
         NUM_LEAF_NODES              = sizeof(uint64_t) * 8,  // 8byte * 8bit = 64 leaf nodes
         ENTRIES_PER_LEAF_NODE       = sizeof(uint64_t) * 8,  // 8byte * 8bit = 64 entries per leaf node
-        ENTRIES_PER_LEAF_NODE_SHIFT = math::compile_time::log2i(ENTRIES_PER_LEAF_NODE), // 6
+        // The cast keeps the template argument an integral type on MSVC,
+        // which types prior enumerators as the (non-integral) enum already
+        // during the enum's own definition.
+        ENTRIES_PER_LEAF_NODE_SHIFT = math::compile_time::log2i(static_cast<unsigned>(ENTRIES_PER_LEAF_NODE)), // 6
         NUM_ENTRIES                 = NUM_LEAF_NODES * ENTRIES_PER_LEAF_NODE, // 4096 total entries
     };
 

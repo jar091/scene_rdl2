@@ -1,4 +1,4 @@
-// Copyright 2023-2024 DreamWorks Animation LLC
+﻿// Copyright 2023-2024 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
 
 //
@@ -34,19 +34,26 @@ RecTick::start()
 #if defined(__aarch64__)  // TODO: actually check this
     asm volatile("mrs %0, cntvct_el0" : "=r"(mStartTick));
 
+#elif defined(_MSC_VER)
+
+    // No inline asm on x64 MSVC; same CPUID-serialized RDTSC via intrinsics.
+    int regs[4];
+    __cpuid(regs, 0);
+    mStartTick = __rdtsc();
+
 #else
 
     uint32_t high, low;
-    
+
     asm volatile("CPUID\n\t"
                  "RDTSC\n\t"
                  "mov %%edx, %0\n\t"
-                 "mov %%eax, %1\n\t": "=r" (high), "=r" (low):: 
+                 "mov %%eax, %1\n\t": "=r" (high), "=r" (low)::
                  "%rax", "%rbx", "%rcx", "%rdx");
 
     mStartTick = ((uint64_t(high)) << 32) | low;
 #endif
-    
+
 }
 
 inline uint64_t
@@ -54,6 +61,13 @@ RecTick::end()
 {
 #if defined(__aarch64__)  // TODO: actually check this
     asm volatile("mrs %0, cntvct_el0" : "=r"(mEndTick));
+
+#elif defined(_MSC_VER)
+
+    unsigned int aux;
+    mEndTick = __rdtscp(&aux);
+    int regs[4];
+    __cpuid(regs, 0); // serialize after RDTSCP, mirroring the asm version
 
 #else
 
@@ -63,7 +77,7 @@ RecTick::end()
     asm volatile("RDTSCP\n\t"
                  "mov %%edx, %0\n\t"
                  "mov %%eax, %1\n\t"
-                 "CPUID\n\t": "=r" (high), "=r" (low):: 
+                 "CPUID\n\t": "=r" (high), "=r" (low)::
                  "%rax", "%rbx", "%rcx", "%rdx");
 
     mEndTick = ((uint64_t(high)) << 32) | low;
@@ -74,7 +88,7 @@ RecTick::end()
 
 //------------------------------------------------------------------------------
 
-class __attribute__((aligned(64))) RecTickLog
+class alignas(64) RecTickLog
 //
 // Simple logging for tick value
 //

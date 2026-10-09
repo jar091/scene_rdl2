@@ -67,7 +67,7 @@ struct LayerAssignment {
  * It will return the same assignment ID as the previous assignment that was
  * there before.
  */
-class Layer : public TraceSet
+class RDL2_EXPORT Layer : public TraceSet
 {
 public:
     typedef TraceSet Parent;

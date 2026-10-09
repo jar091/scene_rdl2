@@ -28,5 +28,14 @@ function(SceneRdl2_cxx_compile_definitions target)
             _LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR=1 # Clang - enable auto_ptr when targeting c++17
             _LIBCPP_ENABLE_CXX17_REMOVED_RANDOM_SHUFFLE=1 # Clang - ensure std::random_shuffle is available
             _LIBCPP_ENABLE_CXX17_REMOVED_UNARY_BINARY_FUNCTION
+            $<$<CXX_COMPILER_ID:MSVC>:
+                NOMINMAX                            # windows.h must not define min/max macros
+                WIN32_LEAN_AND_MEAN                 # keep windows.h lean where it leaks into headers
+                _USE_MATH_DEFINES                   # M_PI and friends from <cmath>
+                _CRT_SECURE_NO_WARNINGS             # no C4996 spam for standard C functions
+                _ENABLE_EXTENDED_ALIGNED_STORAGE    # correct over-aligned std::aligned_storage
+                __PRETTY_FUNCTION__=__FUNCSIG__     # GCC spelling used across tests/logging
+                _HAS_AUTO_PTR_ETC=1                 # MSVC STL: keep C++17-removed auto_ptr/random_shuffle (parallels the _LIBCPP_* defines above)
+            >
     )
 endfunction()

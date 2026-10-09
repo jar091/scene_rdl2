@@ -54,8 +54,13 @@ public:
             mBytesAllocated = bytesToAllocate;
             // mRawData is a member of the Hybrid Uniform Data struct so that ISPC can access it.
             // This (deliberately) doesn't call the constructor on objects!
-            mRawData = (uint8_t *)util::alignedMallocArray<T>(area, CACHE_LINE_SIZE), AlignedDeleter();
-            mData.reset((T*)mRawData);
+            //
+            // The deleter must be attached to the shared_ptr: the historical
+            // `..., AlignedDeleter();` was a discarded comma-operand, so the
+            // default `delete` ran against alignedMalloc'd memory (undefined;
+            // actual heap corruption under Windows' _aligned_malloc).
+            mRawData = (uint8_t *)util::alignedMallocArray<T>(area, CACHE_LINE_SIZE);
+            mData.reset((T*)mRawData, AlignedDeleter());
         }
 
         MNRY_ASSERT(mBytesAllocated >= bytesToAllocate);

@@ -79,8 +79,8 @@ public:
     inline void deqUShort(unsigned short &us) { deq<unsigned short>(us); }
     inline void deqInt(int &i);              // using variable length coding internally
     inline void deqUInt(unsigned int &ui);   // using variable length coding internally
-    inline void deqLong(long &l);            // using variable length coding internally
-    inline void deqULong(unsigned long &ul); // using variable length coding internally
+    inline void deqLong(std::int64_t &l);            // using variable length coding internally
+    inline void deqULong(std::uint64_t &ul); // using variable length coding internally
     inline void deqMask32(uint32_t &mask) { deq<uint32_t>(mask); }
     inline void deqMask64(uint64_t &mask) { deq<uint64_t>(mask); }
     inline void deqFloat(float &f)   { deq<float>(f); }
@@ -125,12 +125,12 @@ public:
     template <typename T> void 
     deqVector(T &vec)
     {
-        unsigned long size;
+        std::uint64_t size;
         updateCurrPtr(ValueContainerUtil::variableLengthDecoding(mCurrPtr, size));
         VALUE_CONTAINER_DEQ_DEBUG_MSG("deqVector("
                                       << demangle(typeid(T).name()) << ").size():>" << size << "<\n");
         vec.resize(size);
-        const void *ptr = getDeqDataAddrUpdate(sizeof(vec[0]) * size);
+        const void *ptr = getDeqDataAddrUpdate(sizeof(typename T::value_type) * size); // not vec[0]: empty vector
         for (size_t i = 0; i < size; ++i) {
             // Unfortunately following statis_assert return error from
             // rdl2::IntVector, ValueCacheDeq::UIntVector, rdl2::LongVector, rdl2::FloatVector,
@@ -194,8 +194,8 @@ public:
     inline unsigned short deqUShort()      { unsigned short us; deqUShort(us); return us; }
     inline int           deqInt()          { int i; deqInt(i); return i; }
     inline unsigned int  deqUInt()         { unsigned int ui; deqUInt(ui); return ui; }
-    inline long          deqLong()         { long l; deqLong(l); return l; }
-    inline unsigned long deqULong()        { unsigned long ul; deqULong(ul); return ul; }
+    inline std::int64_t  deqLong()         { std::int64_t l; deqLong(l); return l; }
+    inline std::uint64_t deqULong()        { std::uint64_t ul; deqULong(ul); return ul; }
     inline uint32_t      deqMask32()       { uint32_t m; deqMask32(m); return m; }
     inline uint64_t      deqMask64()       { uint64_t m; deqMask64(m); return m; }
     inline float         deqFloat()        { float f; deqFloat(f); return f; }
@@ -242,16 +242,19 @@ public:
     //
     inline void deqVLInt(int &i);
     inline void deqVLUInt(unsigned int &ui);
-    inline void deqVLLong(long &l);
-    inline void deqVLULong(unsigned long &ul);
-    inline void deqVLSizeT(size_t &t) { deqVLULong(static_cast<unsigned long &>(t)); }
+    inline void deqVLLong(std::int64_t &l);
+    inline void deqVLULong(std::uint64_t &ul);
+    // Decode through a fixed-width temporary: size_t is a different type from
+    // uint64_t on LP64 (unsigned long vs unsigned long long), so the old
+    // reference cast does not compile portably.
+    inline void deqVLSizeT(size_t &t) { std::uint64_t v; deqVLULong(v); t = static_cast<size_t>(v); }
     inline void deqVLIntVector(IntVector &vec);
     inline void deqVLLongVector(LongVector &vec);
 
     inline int           deqVLInt()        { int i; deqVLInt(i); return i; }
     inline unsigned int  deqVLUInt()       { unsigned int ui; deqVLUInt(ui); return ui; }
-    inline long          deqVLLong()       { long l; deqVLLong(l); return l; }
-    inline unsigned long deqVLULong()      { unsigned long ul; deqVLULong(ul); return ul; }
+    inline std::int64_t  deqVLLong()       { std::int64_t l; deqVLLong(l); return l; }
+    inline std::uint64_t deqVLULong()      { std::uint64_t ul; deqVLULong(ul); return ul; }
     inline size_t        deqVLSizeT()      { size_t v; deqVLSizeT(v); return v; }
     inline IntVector     deqVLIntVector()  { IntVector vec; deqVLIntVector(vec); return vec; }
     inline LongVector    deqVLLongVector() { LongVector vec; deqVLLongVector(vec); return vec; }
@@ -364,14 +367,14 @@ ValueContainerDeq::deqUInt(unsigned int &ui)
 }
 
 inline void
-ValueContainerDeq::deqLong(long &l)
+ValueContainerDeq::deqLong(std::int64_t &l)
 {
     updateCurrPtr(ValueContainerUtil::variableLengthDecoding(mCurrPtr, l));
     VALUE_CONTAINER_DEQ_DEBUG_MSG("deqLong():>" << l << "<\n");
 }
 
 inline void
-ValueContainerDeq::deqULong(unsigned long &ul)
+ValueContainerDeq::deqULong(std::uint64_t &ul)
 {
     updateCurrPtr(ValueContainerUtil::variableLengthDecoding(mCurrPtr, ul));
     VALUE_CONTAINER_DEQ_DEBUG_MSG("deqULong():>" << ul << "<\n");
@@ -406,7 +409,7 @@ ValueContainerDeq::deqFloat12(float &f0, float &f1, float &f2,
 inline void
 ValueContainerDeq::deqString(std::string &str)
 {
-    unsigned long ul;
+    std::uint64_t ul;
     updateCurrPtr(ValueContainerUtil::variableLengthDecoding(mCurrPtr, ul));
     size_t size = static_cast<size_t>(ul);
     if (size) {
@@ -421,7 +424,7 @@ ValueContainerDeq::deqString(std::string &str)
 inline void
 ValueContainerDeq::deqSceneObject(std::string &klassName, std::string &objName)
 {
-    unsigned long ul;
+    std::uint64_t ul;
     updateCurrPtr(ValueContainerUtil::variableLengthDecoding(mCurrPtr, ul));
     size_t klassNameSize = static_cast<size_t>(ul);
     updateCurrPtr(ValueContainerUtil::variableLengthDecoding(mCurrPtr, ul));
@@ -471,7 +474,7 @@ ValueContainerDeq::deqAlignPad(const unsigned short padSize)
 inline void
 ValueContainerDeq::deqBoolVector(BoolVector &vec)
 {
-    unsigned long size;
+    std::uint64_t size;
     updateCurrPtr(ValueContainerUtil::variableLengthDecoding(mCurrPtr, size));
     VALUE_CONTAINER_DEQ_DEBUG_MSG("deqBoolVector() vec.size():>" << size << "<\n");
     vec.resize(size);
@@ -487,12 +490,12 @@ ValueContainerDeq::deqBoolVector(BoolVector &vec)
 inline void
 ValueContainerDeq::deqStringVector(StringVector &vec)
 {
-    unsigned long size;
+    std::uint64_t size;
     updateCurrPtr(ValueContainerUtil::variableLengthDecoding(mCurrPtr, size));
     VALUE_CONTAINER_DEQ_DEBUG_MSG("deqStringVector() vec.size():>" << size << "<\n");
     vec.resize(size);
     for (size_t i = 0; i < size; ++i) {
-        unsigned long len;
+        std::uint64_t len;
         updateCurrPtr(ValueContainerUtil::variableLengthDecoding(mCurrPtr, len));
         if (len) {
             vec[i].resize(len);
@@ -507,14 +510,14 @@ ValueContainerDeq::deqStringVector(StringVector &vec)
 inline void
 ValueContainerDeq::deqSceneObjectVector(StringVector &klassNameVec, StringVector &objNameVec)
 {
-    unsigned long size;
+    std::uint64_t size;
     updateCurrPtr(ValueContainerUtil::variableLengthDecoding(mCurrPtr, size));
 
     VALUE_CONTAINER_DEQ_DEBUG_MSG("deqSceneObjectVector() vecSize:>" << size << "<\n");
     klassNameVec.resize(size);
     objNameVec.resize(size);
     for (size_t i = 0; i < size; ++i) {
-        unsigned long ul;
+        std::uint64_t ul;
         updateCurrPtr(ValueContainerUtil::variableLengthDecoding(mCurrPtr, ul));
         size_t klassNameLen = static_cast<size_t>(ul);
         updateCurrPtr(ValueContainerUtil::variableLengthDecoding(mCurrPtr, ul));
@@ -572,14 +575,14 @@ ValueContainerDeq::deqVLUInt(unsigned int &ui)
 }
 
 inline void
-ValueContainerDeq::deqVLLong(long &l)
+ValueContainerDeq::deqVLLong(std::int64_t &l)
 {
     updateCurrPtr(ValueContainerUtil::variableLengthDecoding(mCurrPtr, l));
     VALUE_CONTAINER_DEQ_DEBUG_MSG("deqVLLong():>" << l << "<\n");
 }
 
 inline void
-ValueContainerDeq::deqVLULong(unsigned long &ul)
+ValueContainerDeq::deqVLULong(std::uint64_t &ul)
 {
     updateCurrPtr(ValueContainerUtil::variableLengthDecoding(mCurrPtr, ul));
     VALUE_CONTAINER_DEQ_DEBUG_MSG("deqVLULong():>" << ul << "<\n");
@@ -588,7 +591,7 @@ ValueContainerDeq::deqVLULong(unsigned long &ul)
 inline void
 ValueContainerDeq::deqVLIntVector(IntVector &vec)
 {
-    unsigned long size;
+    std::uint64_t size;
     updateCurrPtr(ValueContainerUtil::variableLengthDecoding(mCurrPtr, size));
     VALUE_CONTAINER_DEQ_DEBUG_MSG("deqVLIntVector() vec.size():>" << size << "<\n");
     vec.resize(static_cast<size_t>(size));
@@ -601,13 +604,13 @@ ValueContainerDeq::deqVLIntVector(IntVector &vec)
 inline void
 ValueContainerDeq::deqVLLongVector(LongVector &vec)
 {
-    unsigned long size;
+    std::uint64_t size;
     updateCurrPtr(ValueContainerUtil::variableLengthDecoding(mCurrPtr, size));
     VALUE_CONTAINER_DEQ_DEBUG_MSG("deqVLLongVector() vec.size():>" << size << "<\n");
     vec.resize(static_cast<size_t>(size));
     for (size_t i = 0; i < size; ++i) {
-        updateCurrPtr(ValueContainerUtil::variableLengthDecoding(mCurrPtr,
-                                                                 reinterpret_cast<long &>(vec[i])));
+        // LongVector's element type is rdl2::Long (int64_t); no cast needed.
+        updateCurrPtr(ValueContainerUtil::variableLengthDecoding(mCurrPtr, vec[i]));
         VALUE_CONTAINER_DEQ_DEBUG_MSG("  deqVLLongVector() vec[" << i << "]:>" << vec[i] << "<\n");
     }
 }

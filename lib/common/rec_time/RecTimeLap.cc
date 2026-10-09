@@ -9,7 +9,17 @@
 #include <iomanip>
 
 #include <limits.h>
+#if defined(_WIN32)
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>            // GetComputerNameA
+#else
 #include <unistd.h>             // gethostname
+#endif
 
 #ifndef HOST_NAME_MAX
 # ifdef _POSIX_HOST_NAME_MAX
@@ -206,8 +216,14 @@ RecTimeLap::saveFile(const std::string &str) const
     std::ofstream oFile(ostr.str());
     if (!oFile) return false;
 
+#if defined(_WIN32)
+    char hostname[MAX_COMPUTERNAME_LENGTH + 1] = {0};
+    DWORD hostnameLen = sizeof(hostname);
+    ::GetComputerNameA(hostname, &hostnameLen);
+#else
     char hostname[HOST_NAME_MAX];
     ::gethostname(hostname, HOST_NAME_MAX);
+#endif
     oFile << "\nhostname:" << hostname << '\n';
     oFile << str;
     oFile.close();

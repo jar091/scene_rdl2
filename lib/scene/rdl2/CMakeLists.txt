@@ -20,10 +20,16 @@ set(luacSources
     ${CMAKE_CURRENT_SOURCE_DIR}/rdlalib/transforms.lua)
 set(luaSources
     ${CMAKE_CURRENT_SOURCE_DIR}/rdlalib/bin2cc.lua)
+# Two explicit steps instead of the historical `luac -o - | lua > rdlalib.cc`
+# pipe: shell pipes/redirection are not binary-safe under cmd.exe (the luac
+# bytecode gets mangled), and bin2cc.lua reads/writes the files directly.
 add_custom_command(
-    COMMAND ${LUA_BIN_LUAC} -o - ${luacSources} | ${LUA_BIN_LUA} ${luaSources} > rdlalib.cc
+    COMMAND ${LUA_BIN_LUAC} -o rdlalib.luac ${luacSources}
+    COMMAND ${LUA_BIN_LUA} ${luaSources} rdlalib.luac rdlalib.cc
     DEPENDS ${luacSources} ${luaSources}
     OUTPUT rdlalib.cc
+    BYPRODUCTS rdlalib.luac
+    VERBATIM
     COMMENT "Generates rdlalib.cc from lua souce")
 
 # Add a target that executes the above custom command when built
@@ -185,10 +191,14 @@ SceneRdl2_cxx_compile_features(scene_rdl2_tmp)
 SceneRdl2_cxx_compile_options(scene_rdl2_tmp)
 SceneRdl2_link_options(scene_rdl2_tmp)
 
-target_compile_definitions(scene_rdl2_tmp
-    PUBLIC
-        __cdecl=                                # Used in Types.h
-)
+if(NOT MSVC)
+    # Types.h spells out __cdecl on function-pointer typedefs; it is a real
+    # keyword on MSVC and must not be macro-erased there.
+    target_compile_definitions(scene_rdl2_tmp
+        PUBLIC
+            __cdecl=                            # Used in Types.h
+    )
+endif()
 # =============================================================
 
 
@@ -262,8 +272,17 @@ add_custom_target(coredata_files ALL DEPENDS ${class_outputs})
 # ( in the 'lib' dir is a symlink scene_rdl2 -> . )
 # ... so consumers can include <scene_rdl2/scene/rdl2/rdl2.isph> at build
 # time. TODO: This is pretty awful, consider other solutions.
-add_custom_target(scene_rdl2_symlink ALL
-    COMMAND ${CMAKE_COMMAND} -E create_symlink . ${CMAKE_CURRENT_BINARY_DIR}/../../scene_rdl2)
+if(WIN32)
+    # cmake -E create_symlink needs privileges on Windows; an NTFS junction
+    # gives the same directory aliasing unprivileged.
+    file(TO_NATIVE_PATH "${CMAKE_CURRENT_BINARY_DIR}/../../scene_rdl2" _selfLinkNative)
+    file(TO_NATIVE_PATH "${CMAKE_CURRENT_BINARY_DIR}/../.." _selfTargetNative)
+    add_custom_target(scene_rdl2_symlink ALL
+        COMMAND cmd /c if not exist "${_selfLinkNative}" mklink /J "${_selfLinkNative}" "${_selfTargetNative}")
+else()
+    add_custom_target(scene_rdl2_symlink ALL
+        COMMAND ${CMAKE_COMMAND} -E create_symlink . ${CMAKE_CURRENT_BINARY_DIR}/../../scene_rdl2)
+endif()
 
 
 # =============================================================

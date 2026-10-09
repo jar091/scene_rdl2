@@ -2,7 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 #include "VectorPacket.h"
 
-#include <unistd.h> // getpid()
+#if defined(_WIN32)
+#include <process.h>            // _getpid()
+// UCRT spelling of getpid() (same pattern as render/util/Files.cc)
+#define getpid ::_getpid
+#else
+#include <unistd.h>             // getpid()
+#endif
 
 namespace scene_rdl2 {
 namespace grid_util {

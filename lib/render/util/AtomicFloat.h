@@ -10,7 +10,14 @@
 // double> behave more like the integral atomic types. We're going to add this
 // behavior. A C++17 library that supports this behavior will define this
 // preprocessor directive.
-#if !defined(__cpp_lib_atomic_float)
+//
+// MSVC: the specializations below are built on GCC's __atomic_* builtins and
+// they collide with the MSVC STL's own std::atomic<float/double> definitions,
+// so they are disabled. MSVC's C++17 std::atomic<float> provides
+// load/store/exchange/compare_exchange; the floating-point fetch_add family
+// arrives with /std:c++20 (revisit when the moonray core needs it -
+// docs/WINDOWS_PORT.md).
+#if !defined(__cpp_lib_atomic_float) && !defined(_MSC_VER)
 
 #if defined(__GNUC__) && !defined(__INTEL_COMPILER)
 // GCC complains about some of the pointers being passed into the intrinsics

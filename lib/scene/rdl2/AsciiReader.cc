@@ -153,7 +153,9 @@ private:
 namespace {
 struct Undef {
     bool operator == (Undef& other) {
-        return *this == other;
+        // Identity comparison; there is a single static instance. (The
+        // original body `return *this == other;` recursed infinitely.)
+        return this == &other;
     }
 };
 }

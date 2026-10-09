@@ -8,6 +8,7 @@
 #include "CacheAllocator.h"
 #include "CacheEnqueue.h"
 
+#include <cstdint>
 #include <iomanip>
 #include <vector>
 
@@ -24,7 +25,7 @@ public:
 
     using IntVecCA   = std::vector<int, CacheAllocator<int>>;
     using UIntVecCA  = std::vector<unsigned, CacheAllocator<unsigned>>;
-    using LongVecCA  = std::vector<long, CacheAllocator<long>>;
+    using LongVecCA  = std::vector<std::int64_t, CacheAllocator<std::int64_t>>;
     using FloatVecCA = std::vector<float, CacheAllocator<float>>;
 
     //
@@ -229,7 +230,7 @@ CacheUtil::enqUIntVector(CacheEnqueue &cEnq, size_t size, const UIntVecCA &buff)
 inline void
 CacheUtil::enqLongVector(CacheEnqueue &cEnq, const LongVecCA &buff)
 {
-    enqVector<long>(cEnq, buff);
+    enqVector<std::int64_t>(cEnq, buff);
 }
 
 // static function
@@ -303,7 +304,7 @@ CacheUtil::deqUIntVector(CacheDequeue &cDeq, size_t size, bool mmap)
 inline CacheUtil::LongVecCA
 CacheUtil::deqLongVector(CacheDequeue &cDeq, bool mmap)
 {
-    return deqVector<long>(cDeq, mmap);
+    return deqVector<std::int64_t>(cDeq, mmap);
 }
 
 // static function

@@ -196,7 +196,7 @@ TestValueContainer::testUInt()
 void    
 TestValueContainer::testLong()
 {
-    std::vector<long> data;
+    std::vector<std::int64_t> data; // fixed-width to match the codec API
     data.push_back(-1000000); // variable length encoded size :  3 byte
     data.push_back(-100);     // variable length encoded size :  2 byte
     data.push_back(0);        // variable length encoded size :  1 byte
@@ -205,15 +205,17 @@ TestValueContainer::testLong()
                               // total                        : 11 byte
 
     testMain2("testLong", data,
-              [](ValueContainerEnq *vcEnq, long v) { vcEnq->enqLong(v); }, // enqFunc
+              [](ValueContainerEnq *vcEnq, std::int64_t v) { vcEnq->enqLong(v); }, // enqFunc
               static_cast<size_t>(11), // variable length coding result size
-              [](ValueContainerDeq *vcDeq, long *v) { vcDeq->deqLong(*v); }); // deqFunc
+              [](ValueContainerDeq *vcDeq, std::int64_t *v) { vcDeq->deqLong(*v); }); // deqFunc
 }
 
 void    
 TestValueContainer::testULong()
 {
-    std::vector<unsigned long> data;
+    // Fixed-width to match the codec API (and `unsigned long` cannot hold
+    // 10^12 on LLP64 platforms).
+    std::vector<std::uint64_t> data;
     data.push_back(0);             // variable length encoded size :  1 byte
     data.push_back(1000);          // variable length encoded size :  2 byte
     data.push_back(10000000);      // variable length encoded size :  4 byte
@@ -221,9 +223,9 @@ TestValueContainer::testULong()
                                    // total                        : 13 byte
 
     testMain2("testULong", data,
-              [](ValueContainerEnq *vcEnq, unsigned long v) { vcEnq->enqULong(v); }, // enqFunc
+              [](ValueContainerEnq *vcEnq, std::uint64_t v) { vcEnq->enqULong(v); }, // enqFunc
               static_cast<size_t>(13), // variable length coding result size
-              [](ValueContainerDeq *vcDeq, unsigned long *v) { vcDeq->deqULong(*v); }); // deqFunc
+              [](ValueContainerDeq *vcDeq, std::uint64_t *v) { vcDeq->deqULong(*v); }); // deqFunc
 }
 
 void    
@@ -740,7 +742,7 @@ TestValueContainer::testLongVector() // int64_t
                  vcEnq->enqLongVector(vec);
 
                  size_t total = ValueContainerUtil::variableLengthEncodingSize(vec.size());
-                 total += sizeof(long) * vec.size();
+                 total += sizeof(Long) * vec.size(); // element type is rdl2::Long (int64_t)
                  return total;
              },
              [&](ValueContainerDeq *vcDeq) { // deqFunc
@@ -1209,7 +1211,7 @@ TestValueContainer::testVLLongVector() // int64_t
 
                  size_t total = ValueContainerUtil::variableLengthEncodingSize(vec.size());
                  for (const auto &itr: vec) {
-                     total += ValueContainerUtil::variableLengthEncodingSize(long(itr));
+                     total += ValueContainerUtil::variableLengthEncodingSize(Long(itr)); // rdl2::Long (int64_t)
                  }
                  return total;
              },

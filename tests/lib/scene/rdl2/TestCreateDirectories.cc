@@ -6,6 +6,10 @@
 
 #include <scene_rdl2/render/util/Files.h>
 #include <sys/stat.h>
+#if defined(_WIN32)
+#include <direct.h> // _mkdir
+#include <cerrno>
+#endif
 
 namespace scene_rdl2 {
 namespace rdl2 {

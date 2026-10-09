@@ -64,7 +64,7 @@ enum class ShadowTerminatorFix
  *      In areas where the context is not const (outside the render loop),
  *      synchronization is up to you.
  */
-class SceneVariables : public SceneObject
+class RDL2_EXPORT SceneVariables : public SceneObject
 {
 public:
     typedef SceneObject Parent;

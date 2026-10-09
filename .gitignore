@@ -28,3 +28,8 @@ CMakeUserPresets.json
 
 # gha created files
 .ci_githooks
+
+# Windows: include/scene_rdl2 is a self-alias (git symlink upstream, NTFS
+# junction here). Git would otherwise walk the junction and duplicate lib/.
+include/scene_rdl2/
+

@@ -134,9 +134,13 @@ protected:
         #ifdef __APPLE__ // TODO: this was causing trouble with the viewport going white for anything not full32, re-check
         result =  __builtin_ctzll(mask64);
         if (mask64 == 0) return 0;
+        #elif defined(_MSC_VER)
+        unsigned long index;
+        _BitScanForward64(&index, mask64); // undefined for 0, like bsf
+        result = index;
         #else
         asm volatile("bsfq %1, %0": "=r"(result): "r"(mask64));
-        #endif 
+        #endif
         return result;
     }
 }; // TileExtrapolationPhaseManager
@@ -554,9 +558,13 @@ TileExtrapolation::countRightZeroBit(uint64_t mask64) const
     uint64_t result;
 #ifdef __APPLE__ // TODO: double check this
         result =  __builtin_ctzll(mask64);
+    #elif defined(_MSC_VER)
+    unsigned long index;
+    _BitScanForward64(&index, mask64); // undefined for 0, like bsf
+    result = index;
     #else
     asm volatile("bsfq %1, %0": "=r"(result): "r"(mask64));
-    #endif 
+    #endif
     return result;
 }
 

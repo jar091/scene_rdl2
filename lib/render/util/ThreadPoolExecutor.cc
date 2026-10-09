@@ -1,12 +1,18 @@
 // Copyright 2024-2025 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
+// CPU pinning is Linux-only (pthread_setaffinity_np / cpu_set_t); Darwin and
+// Windows build the pool without affinity control.
+#if defined(PLATFORM_LINUX)
 #include "CpuAffinityMask.h"
+#endif
 #include "ThreadPoolExecutor.h"
 
 #include <scene_rdl2/common/except/exceptions.h>
 
 #include <iostream>
+#if defined(PLATFORM_LINUX)
 #include <pthread.h> // pthread_setaffinity_np
+#endif
 #include <sstream>
 #include <thread>
 #include <chrono>
@@ -157,7 +163,7 @@ ThreadExecutor::pinThreadToCpu()
 // might throw except::RuntimeError when it fails
 //
 {
-#ifndef PLATFORM_APPLE
+#ifdef PLATFORM_LINUX
     if (mPinCpuId == ~static_cast<int>(0)) return; // no cpu affinity
 
     auto showError = [&](const std::string& funcName, const bool flag) {
@@ -205,7 +211,7 @@ ThreadExecutor::pinThreadToCpu()
         std::cerr << ostr.str();
     }
 #   endif // end DEBUG_MSG_THREAD_CPUAFFINITY
-#endif // end ifndef PLATFORM_APPLE
+#endif // end ifdef PLATFORM_LINUX
 }
 
 //------------------------------------------------------------------------------------------

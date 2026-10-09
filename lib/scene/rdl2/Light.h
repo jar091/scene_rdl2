@@ -28,7 +28,7 @@ enum class TextureFilterType
     TEXTURE_FILTER_NUM_TYPES
 };
         
-class Light : public Node
+class RDL2_EXPORT Light : public Node
 {
 public:
     typedef Node Parent;

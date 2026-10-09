@@ -5,7 +5,18 @@
 #include <scene_rdl2/common/rec_time/RecTime.h>
 #include <scene_rdl2/render/util/StrUtil.h>
 
+#if defined(_WIN32)
+#include <chrono>
+#include <thread>
+// usleep/useconds_t are POSIX; sleep via std::this_thread on Windows.
+typedef unsigned int useconds_t;
+static inline void usleep(useconds_t us)
+{
+    std::this_thread::sleep_for(std::chrono::microseconds(us));
+}
+#else
 #include <unistd.h>
+#endif
 #include <iostream>
 
 namespace scene_rdl2 {

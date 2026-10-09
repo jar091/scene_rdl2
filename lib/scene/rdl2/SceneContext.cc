@@ -27,6 +27,7 @@
 
 #include <scene_rdl2/common/platform/Platform.h>
 #include <scene_rdl2/common/except/exceptions.h>
+#include <scene_rdl2/render/util/Files.h>
 #include <scene_rdl2/render/util/Strings.h>
 #include <scene_rdl2/render/logging/logging.h>
 
@@ -42,12 +43,12 @@
 #include <string>
 #include <vector>
 
-#include <dirent.h>
+// Directory iteration uses std::filesystem; the historical <dirent.h>,
+// <libgen.h> and <unistd.h> includes were unused and are not portable to
+// Windows.
 #include <errno.h>
-#include <libgen.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <unistd.h>
 
 #include <filesystem>
 
@@ -789,8 +790,9 @@ SceneContext::loadAllSceneClasses()
 {
     std::string remaining(getDsoPath());
     while (!remaining.empty()) {
-        // Grab the next path entry.
-        std::size_t colonPos = remaining.find_first_of(':');
+        // Grab the next path entry (':' on POSIX, ';' on Windows -- must
+        // match what DsoFinder produces).
+        std::size_t colonPos = remaining.find_first_of(util::kSearchPathSeparator);
         std::string directory = remaining.substr(0, colonPos);
         std::filesystem::path p(directory);
         if (std::filesystem::exists(p)) {

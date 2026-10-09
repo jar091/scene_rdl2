@@ -19,6 +19,26 @@
 #include <sys/sysctl.h>
 #endif
 
+#ifdef _WIN32
+#include <malloc.h>   // _aligned_malloc / _aligned_free
+#include <intrin.h>   // _ReadWriteBarrier, __debugbreak
+#endif
+
+#if defined(_MSC_VER) && !defined(__clang__)
+// Map the GCC/Clang bit builtins used across scene_rdl2 (BitUtils.h,
+// fb_util/TileExtrapolation.h, fb_util/ActivePixels.h, MemPool.h) onto MSVC
+// intrinsics. The zero-input case is defined here (returns the operand
+// width), which is a superset of the builtins' contract.
+namespace msvc_compat {
+inline unsigned bitScanReverse32(unsigned v) { unsigned long r; return _BitScanReverse(&r, v) ? 31u - r : 32u; }
+inline unsigned bitScanForward32(unsigned v) { unsigned long r; return _BitScanForward(&r, v) ? r : 32u; }
+} // namespace msvc_compat
+#define __builtin_clz(v)      (::msvc_compat::bitScanReverse32(v))
+#define __builtin_ctz(v)      (::msvc_compat::bitScanForward32(v))
+#define __builtin_popcount(v) (static_cast<int>(__popcnt(v)))
+#define __builtin_expect(expr, expected) (expr)
+#endif
+
 // Intel: begin *****
 /*
 #include <string.h>
@@ -93,7 +113,7 @@
 /// Configurations
 ////////////////////////////////////////////////////////////////////////////////
 
-#if defined(__WIN32__) 
+#if defined(_WIN32)
 #if defined(CONFIG_AVX)
   #define __TARGET_AVX__
   #if defined(_MSC_VER) && !defined(__INTEL_COMPILER)
@@ -140,7 +160,7 @@
 /// Makros
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifdef __WIN32__
+#ifdef _WIN32
 #define __dllexport extern "C" __declspec(dllexport)
 #define __dllimport extern "C" __declspec(dllimport)
 #else
@@ -154,13 +174,20 @@
 #  define __hidden __attribute__ ((visibility ("hidden")))
 #endif
 
-#ifdef __WIN32__
+#ifdef _WIN32
 #undef __noinline
 #define __noinline             __declspec(noinline)
 //#define __forceinline          __forceinline
+#define finline                __forceinline
 //#define __restrict             __restrict
 #define __thread               __declspec(thread)
+// __declspec(align()) rather than alignas: the macro is also applied to
+// typedefs (e.g. Typesv.h), where standard alignas is not allowed.
+#define __align(x)             __declspec(align(x))
 #define __aligned(...)           __declspec(align(__VA_ARGS__))
+#define ALIGN(x)               __declspec(align(x))
+#define CACHE_LINE_SIZE        64u
+#define CACHE_ALIGN            __align(CACHE_LINE_SIZE)
 //#define __FUNCTION__           __FUNCTION__
 #define debugbreak()           __debugbreak()
 
@@ -324,7 +351,8 @@ void debugPrint(const char* name, const Car& car, const Cdr&... cdr)
 #define FORCE_LINK_THAT(unit) \
   extern bool unit##_force_link_me; bool unit##_force_link = unit##_force_link_me;
 
-#ifdef __APPLE__
+#if defined(__APPLE__) || defined(_WIN32)
+  // glibc extensions; implemented in Platform.cc for Darwin and Windows.
   void fedisableexcept(unsigned int excepts);
   int feenableexcept(unsigned int excepts);
   int fegetexcept();
@@ -357,8 +385,8 @@ typedef unsigned      char  uint8;
 */
 // Intel: end *****
 
-#ifdef __WIN32__
-#if defined(__X86_64__)
+#if defined(_MSC_VER)
+#if defined(_WIN64)
 typedef int64 ssize_t;
 #else
 typedef int32 ssize_t;
@@ -430,7 +458,7 @@ typedef int32 ssize_t;
 /// Use MNRY_ASSERT for assertions you want compiled out of opt builds.
 #ifdef DEBUG
 #define MNRY_ASSERT(a, ...)                                           \
-    if (!(a)) {                                                       \
+    do { if (!(a)) {                                                  \
         scene_rdl2::logging::Logger::fatal(__FILE__,                  \
                                            ":",                       \
                                            __LINE__,                  \
@@ -441,7 +469,7 @@ typedef int32 ssize_t;
                                            "' failed.  ",             \
                                            std::string{__VA_ARGS__}); \
         std::abort();                                                 \
-    }
+    } } while (0)
 
 /// Code within this macro will only get executed when asserts are active
 #define MNRY_DURING_ASSERTS(exp) exp
@@ -452,7 +480,7 @@ typedef int32 ssize_t;
 
 /// Use MNRY_ASSERT_REQUIRE for assertions you want active in both debug and opt builds
 #define MNRY_ASSERT_REQUIRE(a, ...)                                   \
-    if (!(a)) {                                                       \
+    do { if (!(a)) {                                                  \
         scene_rdl2::logging::Logger::fatal(__FILE__,                  \
                                            ":",                       \
                                            __LINE__,                  \
@@ -463,7 +491,7 @@ typedef int32 ssize_t;
                                            "' failed.  ",             \
                                            std::string{__VA_ARGS__}); \
         std::abort();                                                 \
-    }
+    } } while (0)
 
 // Additional assertion helpers. Move these into dwa/Assert.h at some point
 // in the future if they become popular.
@@ -546,6 +574,13 @@ namespace util {
       // of two is a multiple of that number: 2*(2*2*2), 2*2*(2*2*2), ...
       MNRY_ASSERT(align >= sizeof(void*));
 
+#if defined(_WIN32)
+      // Pairs with _aligned_free() in alignedFree() below; mixing
+      // _aligned_malloc with free() is undefined on Windows.
+      void* memptr = _aligned_malloc(size, align);
+      MNRY_ASSERT(memptr != nullptr || size == 0, "Aligned allocation failed");
+      return memptr;
+#else
       void* memptr = nullptr;
 #if defined(DEBUG)
       const int error =
@@ -557,9 +592,14 @@ namespace util {
       MNRY_ASSERT(error == 0, "Some unexpected error");
 #endif
       return memptr;
+#endif
   }
 
+#if defined(_WIN32)
+  inline void alignedFree(const void* ptr)      { _aligned_free(const_cast<void *>(ptr)); }
+#else
   inline void alignedFree(const void* ptr)      { free(const_cast<void *>(ptr)); }
+#endif
 
 // MoonRay: end *****
 

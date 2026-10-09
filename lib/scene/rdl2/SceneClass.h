@@ -60,7 +60,7 @@ namespace unittest {
  *      modifying metadata in the attributes themselves), while you're reading
  *      it... game over. RDL does not synchronize that for you.
  */
-class SceneClass
+class RDL2_EXPORT SceneClass
 {
 private:
     typedef std::vector<Attribute*> AttributeVector;

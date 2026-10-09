@@ -54,12 +54,14 @@
 
 
 #ifndef __APPLE__
-#ifdef __INTEL_COMPILER 
+#ifdef __INTEL_COMPILER
 // We don't need any include for half float instructions
+#elif defined(_MSC_VER)
+#include <immintrin.h>          // _mm_cvtps_ph, _mm_cvtph_ps : for MSVC build
 #else // else __INTEL_COMPILER
 #include <x86intrin.h>          // _mm_cvtps_ph, _cvtph_ps : for GCC build
 #endif // end !__INTEL_COMPILER
-#endif 
+#endif
 
 //#define DEBUG_MSG_SIZEDUMP
 
@@ -612,6 +614,10 @@ private:
 	__fp16 output;
 	vst1_f16(&output, vcvt_f16_f32(vld1q_f32(&f)));
 	return output;
+#elif defined(_MSC_VER)
+        // MSVC has no _cvtss_sh scalar wrapper; use the F16C intrinsic directly.
+        // Immediate 0 = round to nearest, same as the GCC/ICC path below.
+        return static_cast<unsigned short>(_mm_extract_epi16(_mm_cvtps_ph(_mm_set_ss(f), 0), 0));
 #else
         return _cvtss_sh(f, 0); // Convert full 32bit float to half 16bit float
                                 // An immediate value controlling rounding using bits : 0=Nearest
@@ -624,6 +630,9 @@ private:
 	float output;
 	vst1q_f32(&output, vcvt_f32_f16(vld1_u16(&h)));
 	return output;
+#elif defined(_MSC_VER)
+        // MSVC has no _cvtsh_ss scalar wrapper; use the F16C intrinsic directly.
+        return _mm_cvtss_f32(_mm_cvtph_ps(_mm_cvtsi32_si128(static_cast<int>(h))));
 #else
         return _cvtsh_ss(h); // Convert half 16bit float to full 32bit float
 #endif

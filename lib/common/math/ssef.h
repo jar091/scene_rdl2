@@ -407,7 +407,7 @@ __forceinline const ssef select(const int mask, const ssef& t, const ssef& f) {
   {
     return _mm_atan2_ps(a.m128, b.m128);
   }
-#elif defined(__GNUG__) && !defined(__INTEL_COMPILER) && !defined(__aarch64__)
+#elif (defined(__GNUG__) || defined(_MSC_VER)) && !defined(__INTEL_COMPILER) && !defined(__aarch64__)
 
   // Atan() + Atan2() SSE Intrinsic Emulator
   // Intel provides an atan and atan2 intrinsic in their short vector math library.
@@ -421,8 +421,13 @@ __forceinline const ssef select(const int mask, const ssef& t, const ssef& f) {
   // TODO: This code is under the MIT license:
   // https://github.com/xoolive/geodesy/blob/master/license.txt
 
-  #define ALIGN16_BEG
-  #define ALIGN16_END __attribute__((aligned(16)))
+  #if defined(_MSC_VER)
+    #define ALIGN16_BEG __declspec(align(16))
+    #define ALIGN16_END
+  #else
+    #define ALIGN16_BEG
+    #define ALIGN16_END __attribute__((aligned(16)))
+  #endif
 
   // Masks
   static const ALIGN16_BEG int _mm_cst_sign_mask[4] ALIGN16_END =

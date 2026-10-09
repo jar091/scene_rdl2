@@ -47,7 +47,7 @@ namespace rdl2 {
  *      if you are mucking about with SceneObjects in another thread while the
  *      AsciiReader is working.
  */
-class AsciiReader
+class RDL2_EXPORT AsciiReader
 {
 public:
     /**

@@ -13,7 +13,11 @@
 #endif
 
 // Macro for marking symbols which should be exported from RDL2 DSOs.
+#if defined(_WIN32)
+#define RDL2_DSO_EXPORT __declspec(dllexport)
+#else
 #define RDL2_DSO_EXPORT __attribute__((visibility("default")))
+#endif
 
 // Marks the start of a block of SceneClass attribute declarations in an RDL2
 // DSO.
@@ -113,11 +117,16 @@
 //    DECLARE_HANDLE(FloatAttributeKeyISPC);
 //    (etc.)
 
+// RDL2's handle macro is called RDL2_DECLARE_HANDLE, not DECLARE_HANDLE:
+// the Windows SDK has a DECLARE_HANDLE of its own (winnt.h), and taking that
+// name over broke any translation unit that included an RDL2 header before a
+// Windows header which uses it - cfgmgr32.h's HCMNOTIFICATION, reached through
+// OptiX's optix_stubs.h, is the case that found this.
 #ifdef ISPC
-#define DECLARE_HANDLE(name) struct name##ISPC { int64 unused; }; \
-                             typedef name##ISPC name;
+#define RDL2_DECLARE_HANDLE(name) struct name##ISPC { int64 unused; }; \
+                                  typedef name##ISPC name;
 #else
-#define DECLARE_HANDLE(name) struct name##ISPC { int64 unused; };
+#define RDL2_DECLARE_HANDLE(name) struct name##ISPC { int64 unused; };
 #endif
 
 

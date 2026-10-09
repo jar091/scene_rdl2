@@ -9,8 +9,11 @@
 #include <scene_rdl2/render/util/StrUtil.h>
 
 #include <cstddef> // std::size_t
+#include <cstdint>
 #include <sstream>
 #include <string>
+#include <type_traits>
+#include <memory> // std::allocator (pulls in the STL's internal proxy type on MSVC)
 
 namespace scene_rdl2 {
 namespace cache {
@@ -43,24 +46,41 @@ public:
         mCacheDequeue(cacheDequeue)
     {}
     template <typename U> CacheAllocator(const CacheAllocator<U> &u) noexcept :
-        mCacheDequeue(u.mCacheDequeue)
+        // via the public accessor: CacheAllocator<U> is an unrelated type,
+        // so its protected member is inaccessible here (MSVC's debug STL
+        // actually instantiates this rebind ctor)
+        mCacheDequeue(u.getCacheDequeue())
     {}
+
+    // In cacheDequeue mode only the container's element storage may come out
+    // of the mapped cache data. MSVC's debug STL additionally allocates an
+    // internal bookkeeping object (_Container_proxy) through a rebound
+    // allocator; serving that from the cache would consume payload bytes and
+    // desynchronize the dequeue, so such allocations go to the heap.
+    static constexpr bool sServeFromCache =
+#if defined(_MSC_VER) && defined(_ITERATOR_DEBUG_LEVEL) && _ITERATOR_DEBUG_LEVEL != 0
+        !std::is_same<T, std::_Container_proxy>::value;
+#else
+        true;
+#endif
 
     T *allocate(std::size_t n)
     {
-        if (!mCacheDequeue) return static_cast<T *>(::operator new(sizeof(T) * n));
+        if (!mCacheDequeue || !sServeFromCache) {
+            return static_cast<T *>(::operator new(sizeof(T) * n));
+        }
         return reinterpret_cast<T *>(getMem(sizeof(T) * n));
     }
     void deallocate(T *p, std::size_t n) noexcept
     {
-        if (!mCacheDequeue) ::operator delete(p);
+        if (!mCacheDequeue || !sServeFromCache) ::operator delete(p);
     }
 
     template <typename U, typename... Args>
     void construct(U *p, Args &&... args)
     {
-        if (!mCacheDequeue) {
-            ::new(p) T(std::forward<Args>(args)...);
+        if (!mCacheDequeue || !sServeFromCache) {
+            ::new(p) U(std::forward<Args>(args)...);
         } else {
             // disable construct() function when cacheDeq enable mode
         }

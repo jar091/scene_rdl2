@@ -52,7 +52,7 @@ namespace rdl2 {
  *  
  *  */
 
-class ShadowReceiverSet : public GeometrySet
+class RDL2_EXPORT ShadowReceiverSet : public GeometrySet
 {
 public:
 

@@ -35,6 +35,10 @@
 #ifdef __APPLE__
 #include <libkern/OSByteOrder.h>
 #define be64toh(x) OSSwapBigToHostInt64(x)
+#elif defined(_WIN32)
+// Windows is little-endian on every supported architecture.
+#include <cstdlib>
+#define be64toh(x) _byteswap_uint64(x)
 #else
 #include <endian.h>
 #endif
@@ -459,8 +463,8 @@ BinaryReader::unpackValue(ValueContainerDeq &vContainerDeq,
         sceneObject.set(keyGen<Int>(transientEncoding, attributeId, attributeName, sceneClass), val, timestep);
     } break;
     case ValueContainerUtil::ValueType::LONG : {
-        long val; vContainerDeq.deqLong(val);
-        sceneObject.set(keyGen<Long>(transientEncoding, attributeId, attributeName, sceneClass), Long(val), timestep);
+        Long val; vContainerDeq.deqLong(val); // rdl2::Long == int64_t, matching the fixed-width codec
+        sceneObject.set(keyGen<Long>(transientEncoding, attributeId, attributeName, sceneClass), val, timestep);
     } break;
     case ValueContainerUtil::ValueType::FLOAT : {
         Float val; vContainerDeq.deqFloat(val);

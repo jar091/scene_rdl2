@@ -1,6 +1,12 @@
 // Copyright 2023-2024 DreamWorks Animation LLC
 // SPDX-License-Identifier: Apache-2.0
 
+#if defined(_MSC_VER)
+#define TEST_NOINLINE __declspec(noinline)
+#else
+#define TEST_NOINLINE __attribute__((noinline))
+#endif
+
 #include "test_math_Mat4.h"
 
 #include <vector>
@@ -17,7 +23,7 @@ using namespace scene_rdl2;
 using namespace scene_rdl2::math;
 
 template <typename M, typename V>
-__attribute__((noinline)) void
+TEST_NOINLINE void
 generateRotation(std::vector<M>& data)
 {
     M mr;
@@ -33,7 +39,7 @@ generateRotation(std::vector<M>& data)
 }
 
 template <typename M, typename V>
-__attribute__((noinline)) void
+TEST_NOINLINE void
 gmathGenerateRotation(std::vector<M>& data)
 {
     M mr;
@@ -49,7 +55,7 @@ gmathGenerateRotation(std::vector<M>& data)
 }
 
 template <typename M, typename V>
-__attribute__((noinline)) void
+TEST_NOINLINE void
 generateScale(std::vector<M>& data)
 {
     M ms(1.1,0.0,0.0,0.0,
@@ -60,7 +66,7 @@ generateScale(std::vector<M>& data)
 }
 
 template <typename V>
-__attribute__((noinline)) void
+TEST_NOINLINE void
 generatePoints(std::vector<V>& data)
 {
     V offset(0.001, 0.001, 0.001);
@@ -75,7 +81,7 @@ generatePoints(std::vector<V>& data)
 }
 
 template <typename M, typename V>
-__attribute__((noinline)) void
+TEST_NOINLINE void
 compute(const int iterations,
         const std::vector<M>& rotation,
         const std::vector<M>& scale,
@@ -90,7 +96,7 @@ compute(const int iterations,
     }
 }
 template <typename M, typename V>
-__attribute__((noinline)) void
+TEST_NOINLINE void
 gmathCompute(const int iterations,
         const std::vector<M>& rotation,
         const std::vector<M>& scale,

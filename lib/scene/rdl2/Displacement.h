@@ -20,7 +20,7 @@ namespace scene_rdl2 { namespace texture { struct TLState; } }
 namespace scene_rdl2 {
 namespace rdl2 {
 
-class Displacement : public RootShader
+class RDL2_EXPORT Displacement : public RootShader
 {
 public:
     typedef RootShader Parent;

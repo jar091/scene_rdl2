@@ -75,8 +75,8 @@ ValueContainerEnq::saveSceneObjectVL(void *ptr, const SceneObject *obj)
         const std::string &klassName = obj->getSceneClass().getName();
         const std::string &objName = obj->getName();
 
-        unsigned long klassNameSize = static_cast<unsigned long>(klassName.size());
-        unsigned long objNameSize = static_cast<unsigned long>(objName.size());
+        std::uint64_t klassNameSize = static_cast<std::uint64_t>(klassName.size());
+        std::uint64_t objNameSize = static_cast<std::uint64_t>(objName.size());
 
         ptr = updatePtr(ptr, ValueContainerUtil::variableLengthEncoding(klassNameSize, ptr));
         ptr = updatePtr(ptr, ValueContainerUtil::variableLengthEncoding(objNameSize, ptr));
@@ -86,8 +86,8 @@ ValueContainerEnq::saveSceneObjectVL(void *ptr, const SceneObject *obj)
 
         VALUE_CONTAINER_ENQ_DEBUG_MSG("klass:>" << klassName << "< obj:>" << objName << "<\n");
     } else {
-        ptr = updatePtr(ptr, ValueContainerUtil::variableLengthEncoding(static_cast<unsigned long>(0), ptr));
-        ptr = updatePtr(ptr, ValueContainerUtil::variableLengthEncoding(static_cast<unsigned long>(0), ptr));
+        ptr = updatePtr(ptr, ValueContainerUtil::variableLengthEncoding(static_cast<std::uint64_t>(0), ptr));
+        ptr = updatePtr(ptr, ValueContainerUtil::variableLengthEncoding(static_cast<std::uint64_t>(0), ptr));
         VALUE_CONTAINER_ENQ_DEBUG_MSG("klass:>< obj:><\n");
     }
     return ptr;

@@ -79,7 +79,7 @@ ContainerWrapper<Container> makeContainerWrapper(const Container& c)
  * return the same assignment ID that was there before.
  */
 
-class TraceSet : public SceneObject
+class RDL2_EXPORT TraceSet : public SceneObject
 {
 public:
     typedef SceneObject Parent;

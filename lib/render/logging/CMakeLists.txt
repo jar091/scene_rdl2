@@ -48,10 +48,12 @@ SceneRdl2_cxx_compile_options(${component})
 SceneRdl2_link_options(${component})
 
 # Disable auto_ptr deprecated warning from old log4cplus
-target_compile_options(${component}
-    PRIVATE
-        -Wno-deprecated-declarations
-    )
+if(NOT MSVC)
+    target_compile_options(${component}
+        PRIVATE
+            -Wno-deprecated-declarations
+        )
+endif()
 
 # -------------------------------------
 # Install the target and the export set

@@ -12,7 +12,7 @@
 namespace scene_rdl2 {
 namespace rdl2 {
 
-class VolumeShader : public RootShader
+class RDL2_EXPORT VolumeShader : public RootShader
 {
 public:
     typedef RootShader Parent;

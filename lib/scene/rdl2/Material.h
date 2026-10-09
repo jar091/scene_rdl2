@@ -24,7 +24,7 @@ struct RaySwitchContext {
 };
 
 
-class Material : public RootShader
+class RDL2_EXPORT Material : public RootShader
 {
 public:
     typedef RootShader Parent;

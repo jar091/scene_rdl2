@@ -957,9 +957,10 @@ protected:
     std::unique_ptr<Extension> mExt;
 
 private:
-    // Non-copyable.
-    SceneObject(const SceneObject&);
-    const SceneObject& operator=(const SceneObject&);
+    // Non-copyable. `= delete` (not merely undefined) so that dllexported
+    // derived classes don't emit references to a nonexistent definition.
+    SceneObject(const SceneObject&) = delete;
+    const SceneObject& operator=(const SceneObject&) = delete;
 
     // Utility function for testing types when we must fall back on the runtime
     // type. Not exposed publicly because you really shouldn't need it.

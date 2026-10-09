@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include <scene_rdl2/common/platform/Platform.h> // util::alignedFree
+
 #include <cstdint>
 #include <memory> // shared_ptr
 #include <string>
@@ -50,12 +52,14 @@ public:
     }
     ~SnapshotDeltaTestData()
     {
-        free(mOrgValBuff);
-        free(mOrgWgtBuff);
-        free(mDstValBuff);
-        free(mDstWgtBuff);
-        free(mSrcValBuff);
-        free(mSrcWgtBuff);
+        // Buffers come from util::alignedMalloc; alignedFree is the matching
+        // deallocator (plain free() breaks the pairing on Windows).
+        scene_rdl2::util::alignedFree(mOrgValBuff);
+        scene_rdl2::util::alignedFree(mOrgWgtBuff);
+        scene_rdl2::util::alignedFree(mDstValBuff);
+        scene_rdl2::util::alignedFree(mDstWgtBuff);
+        scene_rdl2::util::alignedFree(mSrcValBuff);
+        scene_rdl2::util::alignedFree(mSrcWgtBuff);
         mOrgValBuff = nullptr;
         mOrgWgtBuff = nullptr;
         mDstValBuff = nullptr;

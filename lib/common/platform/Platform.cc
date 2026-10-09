@@ -60,6 +60,62 @@ namespace util {
   }
 }
 }
+
+#include <cfenv>
+#include <float.h>
+
+namespace {
+
+// _controlfp_s exception-mask bits: SET means the exception is MASKED
+// (disabled); the fe*except API talks about ENABLED exceptions.
+unsigned int feBitsToEmMask(unsigned int excepts)
+{
+    unsigned int em = 0;
+    if (excepts & FE_INVALID)   em |= _EM_INVALID;
+    if (excepts & FE_DIVBYZERO) em |= _EM_ZERODIVIDE;
+    if (excepts & FE_OVERFLOW)  em |= _EM_OVERFLOW;
+    if (excepts & FE_UNDERFLOW) em |= _EM_UNDERFLOW;
+    if (excepts & FE_INEXACT)   em |= _EM_INEXACT;
+    return em;
+}
+
+} // namespace
+
+int
+feenableexcept(unsigned int excepts)
+{
+    unsigned int current = 0;
+    _controlfp_s(&current, 0, 0);
+    const unsigned int em = feBitsToEmMask(excepts & FE_ALL_EXCEPT);
+    unsigned int unused = 0;
+    _controlfp_s(&unused, current & ~em, _MCW_EM);
+    return int(excepts & FE_ALL_EXCEPT);
+}
+
+void
+fedisableexcept(unsigned int excepts)
+{
+    unsigned int current = 0;
+    _controlfp_s(&current, 0, 0);
+    const unsigned int em = feBitsToEmMask(excepts & FE_ALL_EXCEPT);
+    unsigned int unused = 0;
+    _controlfp_s(&unused, current | em, _MCW_EM);
+}
+
+int
+fegetexcept()
+{
+    unsigned int current = 0;
+    _controlfp_s(&current, 0, 0);
+    unsigned int enabled = 0; // enabled == not masked
+    if (!(current & _EM_INVALID))    enabled |= FE_INVALID;
+    if (!(current & _EM_ZERODIVIDE)) enabled |= FE_DIVBYZERO;
+    if (!(current & _EM_OVERFLOW))   enabled |= FE_OVERFLOW;
+    if (!(current & _EM_UNDERFLOW))  enabled |= FE_UNDERFLOW;
+    if (!(current & _EM_INEXACT))    enabled |= FE_INEXACT;
+    return int(enabled);
+}
+
 #endif
 
 ////////////////////////////////////////////////////////////////////////////////

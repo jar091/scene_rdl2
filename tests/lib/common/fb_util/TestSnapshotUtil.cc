@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <functional>
 #include <iomanip>
+#include <numeric> // std::iota
 #include <vector>
 #include <stdlib.h> // posix_memalign
 
@@ -132,12 +133,12 @@ TestSnapshotUtil::testHeatMapWeight()
              return flag;
          });
 
-    free(dstV);
-    free(dstW);
-    free(srcV);
-    free(srcW);
-    free(tgtV);
-    free(tgtW);
+    scene_rdl2::util::alignedFree(dstV); // paired with util::alignedMalloc
+    scene_rdl2::util::alignedFree(dstW); // paired with util::alignedMalloc
+    scene_rdl2::util::alignedFree(srcV); // paired with util::alignedMalloc
+    scene_rdl2::util::alignedFree(srcW); // paired with util::alignedMalloc
+    scene_rdl2::util::alignedFree(tgtV); // paired with util::alignedMalloc
+    scene_rdl2::util::alignedFree(tgtW); // paired with util::alignedMalloc
 }
 
 void
@@ -222,9 +223,9 @@ TestSnapshotUtil::testWeight()
              return flag;
          });
 
-    free(dstW);
-    free(srcW);
-    free(tgtW);
+    scene_rdl2::util::alignedFree(dstW); // paired with util::alignedMalloc
+    scene_rdl2::util::alignedFree(srcW); // paired with util::alignedMalloc
+    scene_rdl2::util::alignedFree(tgtW); // paired with util::alignedMalloc
 }
 
 void
@@ -320,9 +321,9 @@ TestSnapshotUtil::testWeightMask()
              return flag;
          });
 
-    free(dstW);
-    free(srcW);
-    free(tgtW);
+    scene_rdl2::util::alignedFree(dstW); // paired with util::alignedMalloc
+    scene_rdl2::util::alignedFree(srcW); // paired with util::alignedMalloc
+    scene_rdl2::util::alignedFree(tgtW); // paired with util::alignedMalloc
 }
 
 void
@@ -560,12 +561,12 @@ TestSnapshotUtil::testFloatNWeight(const std::string& testName,
              return flag;
          });
 
-    free(dstV);
-    free(dstW);
-    free(srcV);
-    free(srcW);
-    free(tgtV);
-    free(tgtW);
+    scene_rdl2::util::alignedFree(dstV); // paired with util::alignedMalloc
+    scene_rdl2::util::alignedFree(dstW); // paired with util::alignedMalloc
+    scene_rdl2::util::alignedFree(srcV); // paired with util::alignedMalloc
+    scene_rdl2::util::alignedFree(srcW); // paired with util::alignedMalloc
+    scene_rdl2::util::alignedFree(tgtV); // paired with util::alignedMalloc
+    scene_rdl2::util::alignedFree(tgtW); // paired with util::alignedMalloc
 }
 
 void
@@ -671,12 +672,12 @@ TestSnapshotUtil::testFloatNNumSample(const int pixDim,
              return flag;
          });
 
-    free(dstV);
-    free(dstN);
-    free(srcV);
-    free(srcN);
-    free(tgtV);
-    free(tgtN);
+    scene_rdl2::util::alignedFree(dstV); // paired with util::alignedMalloc
+    scene_rdl2::util::alignedFree(dstN); // paired with util::alignedMalloc
+    scene_rdl2::util::alignedFree(srcV); // paired with util::alignedMalloc
+    scene_rdl2::util::alignedFree(srcN); // paired with util::alignedMalloc
+    scene_rdl2::util::alignedFree(tgtV); // paired with util::alignedMalloc
+    scene_rdl2::util::alignedFree(tgtN); // paired with util::alignedMalloc
 }
 
 template <typename T>
