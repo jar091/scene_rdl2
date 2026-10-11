@@ -5,6 +5,7 @@
 #include "NumaUtil.h"
 #include "ShmAffinityInfo.h"
 
+#include <algorithm> // std::sort, std::max_element (not included indirectly with GCC 14)
 #include <iostream> // debug
 #include <unistd.h> // getpid()
 #include <unordered_set>
